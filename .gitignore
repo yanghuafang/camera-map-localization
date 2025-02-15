@@ -1,0 +1,96 @@
+# ── Build directories ────────────────────────────────────────────────────────
+build/
+Build/
+build-*/
+cmake-build-*/
+
+# ── CMake ────────────────────────────────────────────────────────────────────
+# Out-of-source builds land in build/ above; these catch an accidental in-source
+# `cmake .`. Makefile is root-anchored so a hand-written one elsewhere is not
+# silently ignored.
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+/Makefile
+
+# ── Compiled output ──────────────────────────────────────────────────────────
+# Objects and dependency files
+*.d
+*.o
+*.obj
+*.lo
+*.slo
+# Precompiled headers
+*.gch
+*.pch
+# Static libraries
+*.a
+*.la
+*.lai
+*.lib
+# Shared libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+# Executables
+*.app
+*.exe
+*.out
+
+# ── Debug info ───────────────────────────────────────────────────────────────
+*.dSYM/
+*.dwo
+*.ilk
+*.pdb
+
+# ── Crash dumps ──────────────────────────────────────────────────────────────
+# `core` is anchored: an unanchored rule would ignore a src/core/ directory.
+/core
+core.[0-9]*
+
+# ── Test and tool output ─────────────────────────────────────────────────────
+Testing/
+# clangd index
+.cache/
+
+# ── Editors and IDEs ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.cursor/
+*~
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# ── Package managers ─────────────────────────────────────────────────────────
+vcpkg_installed/
+
+# ── Merge and patch artifacts ────────────────────────────────────────────────
+*.orig
+*.rej
+
+# ── OS: Linux ────────────────────────────────────────────────────────────────
+# KDE per-folder settings, trash, NFS silly-rename temporaries
+.directory
+.Trash-*
+.nfs*
+
+# ── OS: macOS ────────────────────────────────────────────────────────────────
+# ._* are AppleDouble sidecars on non-APFS volumes
+.DS_Store
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+
+# ── OS: Windows ──────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
