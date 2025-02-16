@@ -1,4 +1,6 @@
 # ── Build directories ────────────────────────────────────────────────────────
+# Builds live beside the repository (see scripts/lib.sh camloc_build_dir), so
+# these only catch an in-tree `cmake -B build` done by hand.
 build/
 Build/
 build-*/
