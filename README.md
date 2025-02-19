@@ -14,6 +14,16 @@ It is written to be **read**. Every non-obvious decision carries the reason it
 was made, and where the implementation falls short of its own documentation, it
 says so.
 
+## Build and test
+
+```bash
+./scripts/install_deps_macos.sh   # or install_deps_ubuntu.sh
+./scripts/ci.sh                   # configure, build, run the unit tests
+```
+
+[BUILD.md](docs/BUILD.md) covers prerequisites and CMake options,
+[TESTING.md](docs/TESTING.md) the test suite.
+
 ## Status
 
 Early. Nothing here localizes anything yet.

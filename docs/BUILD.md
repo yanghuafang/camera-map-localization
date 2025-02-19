@@ -44,8 +44,9 @@ Resolved from the **system package manager**:
 | Library | Homebrew | apt | Used for |
 |---------|----------|-----|----------|
 | Eigen | `eigen@3` 3.4.1 ✓ | `libeigen3-dev` 3.4.0 ✓ | Linear algebra |
+| GoogleTest | `googletest` 1.18 ✓ | `libgtest-dev` 1.17 ✓ | Unit tests |
 
-With it present the configure needs **no network** — on Ubuntu it drops from
+With them present the configure needs **no network** — on Ubuntu it drops from
 minutes to under a second — and a blocked or throttled route to github.com stops
 being a build failure.
 
@@ -83,15 +84,24 @@ machines:
 
 ```
 -- Eigen 3.4.1
+-- GoogleTest 1.18.0
 ```
 
 ## Configure and build
 
 `$(getconf _NPROCESSORS_ONLN)` reports the core count on both Linux and macOS (substitute `$(nproc)` on Linux if you prefer).
 
+The script picks the build directory for you, which is the usual way in:
+
+```bash
+./scripts/ci.sh            # configure, build, test
+```
+
+By hand, naming the directory yourself:
+
 ```bash
 B=../camera-map-localization-build
-cmake -S . -B "$B"
+cmake -S . -B "$B" -DCAMLOC_BUILD_TESTS=ON
 cmake --build "$B" -j"$(getconf _NPROCESSORS_ONLN)"
 ```
 
@@ -116,11 +126,22 @@ rebuild.
 `CAMLOC_BUILD_DIR` overrides the scheme. `scripts/lib.sh` (`camloc_build_dir`)
 is where it is implemented.
 
-### Libraries produced
+### CMake options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
+
+The tree builds warning-free under `-Wall -Wextra`, which is always on for
+cam_loc's own targets (the dependencies arrive as imported targets and keep
+their own settings).
+
+### Targets produced
 
 | Target | Type |
 |--------|------|
 | `cam_loc_core` | Static library — shared types and SE(3) math |
+| `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
 
 ## Troubleshooting
 

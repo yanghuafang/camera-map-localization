@@ -55,6 +55,7 @@ fi
 PACKAGES=(
   cmake ninja        # build
   eigen@3            # Eigen3::Eigen -- 3.4.1; the unversioned formula is 5.x
+  googletest         # GTest::gtest_main
 )
 
 if [[ "${dry_run}" == true ]]; then

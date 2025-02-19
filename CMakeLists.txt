@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.18)
 
 project(camera_map_localization VERSION 0.1.0 LANGUAGES CXX)
 
+option(CAMLOC_BUILD_TESTS "Build unit tests" ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -44,6 +46,13 @@ if(NOT TARGET Eigen3::Eigen)
   list(APPEND camloc_missing "Eigen >= 3.4   (brew: eigen@3, apt: libeigen3-dev)")
 endif()
 
+if(CAMLOC_BUILD_TESTS)
+  find_package(GTest QUIET)
+  if(NOT TARGET GTest::gtest_main)
+    list(APPEND camloc_missing "GoogleTest     (brew: googletest, apt: libgtest-dev)")
+  endif()
+endif()
+
 if(camloc_missing)
   string(REPLACE ";" "\n  " camloc_missing_lines "${camloc_missing}")
   message(FATAL_ERROR
@@ -58,9 +67,18 @@ endif()
 # build that behaves differently on two hosts starts here.
 message(STATUS "Eigen ${Eigen3_VERSION}")
 
+if(CAMLOC_BUILD_TESTS)
+  message(STATUS "GoogleTest ${GTest_VERSION}")
+  enable_testing()
+endif()
+
 # Position matters: add_compile_options() applies to targets created after it,
 # so these flags reach cam_loc's own code below and nothing else -- the
 # dependencies arrive as imported targets carrying their own interface flags.
 add_compile_options(-Wall -Wextra)
 
 add_subdirectory(src)
+
+if(CAMLOC_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()

@@ -64,6 +64,7 @@ PACKAGES=(
   git
   # C++ libraries the project links against
   libeigen3-dev
+  libgtest-dev
 )
 
 if [[ "${dry_run}" == true ]]; then
