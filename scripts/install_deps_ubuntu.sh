@@ -6,6 +6,11 @@
 # machine and a confusing CMake failure when the route to github.com is blocked
 # or slow.
 #
+# Unlike the macOS side, clang-format comes from the distro and lands on PATH,
+# so lib.sh finds it without a keg prefix. Its version follows the release; the
+# tree formats identically under 18 through 22, and .clang-format restates the
+# one Google default that changed across that range.
+#
 # Not installed here, and why:
 #   CUDA   — a large, driver-coupled install with its own NVIDIA instructions.
 #   ROS 2  — a large opt-in with its own vendor instructions.
@@ -65,6 +70,8 @@ PACKAGES=(
   # C++ libraries the project links against
   libeigen3-dev
   libgtest-dev
+  # Style gate
+  clang-format
 )
 
 if [[ "${dry_run}" == true ]]; then

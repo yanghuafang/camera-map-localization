@@ -25,3 +25,16 @@ ctest --test-dir "$B" --output-on-failure
 | Area | Examples |
 |------|----------|
 | Math | `MathTest` — relative transforms and sequence id formatting |
+
+## Style gates
+
+Not a test, but `ci.sh` runs it and a red gate blocks a change just the same, so
+it belongs in the same pass:
+
+```bash
+./scripts/format.sh          # clang-format + trailing-whitespace strip
+./scripts/format.sh --check  # what the gate runs: reports and exits 1, writes nothing
+```
+
+It needs `clang-format` (`brew install llvm` on macOS, since Xcode ships it not;
+`sudo apt install clang-format` on Ubuntu).

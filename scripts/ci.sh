@@ -2,11 +2,13 @@
 # ci.sh — configure, build and run the unit tests.
 #
 # One script, so that "does this still work" is one command with no arguments
-# and the gates run in a fixed order: the first failure is the one you read.
+# and the gates run in a fixed order -- format first because it is cheapest and
+# needs no build, so the first failure is the one you read.
 #
 # Usage:
 #   ./scripts/ci.sh
 #   ./scripts/ci.sh --debug       # -O0 -g instead of the default
+#   ./scripts/ci.sh --no-style    # skip clang-format
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,15 +17,16 @@ source "${ROOT}/scripts/lib.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: ci.sh [--debug|--release]
+Usage: ci.sh [--debug|--release] [--no-style]
 
-Configure, build and run the unit tests.
+Run the gates in order: format, configure, build, unit tests.
 
 Build options:
   --debug      CMAKE_BUILD_TYPE=Debug.
   --release    CMAKE_BUILD_TYPE=Release.
 
 Other options:
+  --no-style   Skip the clang-format gate.
   -h, --help   Show this help.
 
 Environment:
@@ -36,10 +39,12 @@ USAGE
 CMAKE_EXTRA=()
 build_tags=()
 build_type=""
+run_style=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --debug) build_type=Debug ;;
     --release) build_type=Release ;;
+    --no-style) run_style=false ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -58,6 +63,10 @@ fi
 # One directory per configuration, beside the repository. See camloc_build_dir.
 BUILD="$(camloc_build_dir "${ROOT}" ${build_tags[@]+"${build_tags[@]}"})"
 export CAMLOC_BUILD_DIR="${BUILD}"
+
+if [[ "${run_style}" == true ]]; then
+  "${ROOT}/scripts/format.sh" --check
+fi
 
 cmake -S "${ROOT}" -B "${BUILD}" ${CMAKE_EXTRA[@]+"${CMAKE_EXTRA[@]}"} -DCAMLOC_BUILD_TESTS=ON
 cmake --build "${BUILD}" -j"$(camloc_nproc)"

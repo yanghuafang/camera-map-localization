@@ -48,3 +48,81 @@ camloc_build_dir() {
   done
   echo "$(cd "${root}/.." && pwd)/${dir}"
 }
+
+# Resolve a clang tool (clang-format) and echo its path.
+#
+# Order: CAMLOC_CLANG_FORMAT override, the Homebrew llvm keg, then PATH. The keg
+# comes first because Xcode ships neither clang-format nor clang-tidy, so on
+# macOS PATH would otherwise miss them entirely or find an unrelated install.
+#
+# Path goes to stdout for $(...) capture; the banner goes to stderr. The banner
+# names the binary and version because differing results between two machines are
+# almost always version skew, and that turns it into a one-line diagnosis.
+camloc_resolve_clang_tool() {
+  local tool="$1"
+  local override_var
+  override_var="CAMLOC_$(echo "${tool}" | tr 'a-z-' 'A-Z_')"
+
+  local candidates=()
+  [[ -n "${!override_var:-}" ]] && candidates+=("${!override_var}")
+  if [[ "$(uname -s)" == Darwin ]] && command -v brew >/dev/null 2>&1; then
+    local keg
+    keg="$(brew --prefix llvm 2>/dev/null || true)"
+    [[ -n "${keg}" ]] && candidates+=("${keg}/bin/${tool}")
+  fi
+  candidates+=("${tool}")
+
+  local resolved="" candidate
+  for candidate in "${candidates[@]}"; do
+    if [[ -x "${candidate}" ]]; then
+      resolved="${candidate}"
+      break
+    fi
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      resolved="$(command -v "${candidate}")"
+      break
+    fi
+  done
+
+  if [[ -z "${resolved}" ]]; then
+    {
+      echo "${tool} not found. Set ${override_var}, or install it:"
+      echo "  macOS:  brew install llvm"
+      echo "  Ubuntu: sudo apt install ${tool}"
+    } >&2
+    return 1
+  fi
+
+  # Not always on the first line: LLVM's own builds print an
+  # "LLVM (http://llvm.org/):" banner and put the version underneath.
+  local version
+  version="$("${resolved}" --version 2>/dev/null \
+    | sed -n 's/.*version \([0-9][0-9.]*\).*/\1/p' | head -1)"
+  echo "Using ${resolved} — ${tool} ${version:-(version unknown)}" >&2
+
+  echo "${resolved}"
+}
+
+# Every hand-written C++ source and header, one per line.
+#
+# Named roots rather than a whole-tree find: a hand-made in-tree `cmake -B build`
+# fills build/ with CMake's own generated sources, and cam_loc's style is not
+# theirs to follow.
+#
+# The prune covers the other direction. A dependency that is *vendored* into the
+# tree -- a Qt or OpenSSL subtree under src/ -- would otherwise sit inside a
+# named root and be reformatted to Google style on the next ./format.sh.
+# Directories with these conventional names are skipped, so vendored code keeps
+# whatever style its upstream uses.
+#
+# A subtree that must follow another project's conventions but does not sit
+# under one of these names can instead carry its own .clang-format: the tool
+# reads the nearest config above each file.
+camloc_source_files() {
+  local root="$1"
+  find "${root}/src" "${root}/include" "${root}/tests" \
+    \( -type d \( -name third_party -o -name third-party -o -name thirdparty \
+                  -o -name vendor -o -name external -o -name _deps \) -prune \) \
+    -o \( -type f \( -name '*.cc' -o -name '*.h' \) -print \) \
+    | sort
+}

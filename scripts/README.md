@@ -6,8 +6,8 @@ All scripts assume repository root as working directory (they resolve paths rela
 
 | Script | Purpose |
 |--------|---------|
-| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 googletest`, plus an Xcode Command Line Tools check |
-| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev libgtest-dev` |
+| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 googletest llvm`, plus an Xcode Command Line Tools check |
+| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev libgtest-dev clang-format` |
 
 Both take `--dry-run`. Between them they install everything the build links
 against, so the configure itself needs no network. Neither installs CUDA or
@@ -17,7 +17,7 @@ ROS 2, which are large opt-ins with their own instructions.
 
 | Script | Purpose |
 |--------|---------|
-| `ci.sh` | Configure, build and run the unit tests. `--debug` / `--release` select the build under test |
+| `ci.sh` | Format, configure, build and run the unit tests. `--debug` / `--release` select the build under test; `--no-style` skips the format gate |
 
 Builds land **beside** the repository, one directory per configuration:
 `../<repo>-build`, `../<repo>-build-debug`, and so on: the default
@@ -26,5 +26,18 @@ tree so `git status` never has to look past build output. One per configuration
 so switching between build types is not a full rebuild. `CAMLOC_BUILD_DIR`
 overrides the scheme.
 
-`lib.sh` is not run directly: it holds the shared helpers (`camloc_nproc`,
-`camloc_build_dir`) that the scripts above source.
+## Style gates
+
+| Script | Purpose |
+|--------|---------|
+| `format.sh` | `clang-format` over `src/`, `include/` and `tests/`, plus a trailing-whitespace strip that also covers the scripts, docs and CMakeLists; `--check` reports without writing |
+
+It is run by `ci.sh`:
+
+```bash
+brew install llvm              # macOS — Xcode ships it not
+sudo apt install clang-format  # Ubuntu
+```
+
+`lib.sh` is not run directly: it holds the shared helpers (`camloc_nproc`, the
+clang-tool resolver, the source-file list) that the scripts above source.

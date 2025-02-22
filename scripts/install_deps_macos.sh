@@ -11,6 +11,11 @@
 # decline it. eigen@3 is 3.4.1 and is keg-only, which CMakeLists.txt handles by
 # adding the keg to CMAKE_PREFIX_PATH.
 #
+# llvm is for clang-format, not for compiling: Xcode ships it not, and the
+# compiler used is Apple Clang. The keg is not linked into PATH, which is why
+# lib.sh resolves the tool through `brew --prefix llvm` rather than expecting it
+# on PATH.
+#
 # Not installed here, and why:
 #   CUDA   — unavailable on macOS.
 #   ROS 2  — a large opt-in with its own vendor instructions.
@@ -56,6 +61,7 @@ PACKAGES=(
   cmake ninja        # build
   eigen@3            # Eigen3::Eigen -- 3.4.1; the unversioned formula is 5.x
   googletest         # GTest::gtest_main
+  llvm               # clang-format; Xcode ships none
 )
 
 if [[ "${dry_run}" == true ]]; then
