@@ -1,0 +1,75 @@
+# The CPU build and the unit tests, on each supported platform.
+#
+# One job per platform, from a matrix -- OS is a cheap axis and the two legs
+# differ only in which install script they call. Style gates are in lint.yml, so
+# a formatting slip does not wait behind a compile.
+#
+# No build configuration is spelled out below. Every set of compiler and CMake
+# flags is a preset in CMakePresets.json, so a red job here reproduces locally
+# with the same three commands the job ran.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # Report every platform's result even if one fails.
+      fail-fast: false
+      matrix:
+        # Pinned images. `-latest` moves without telling you, and the move
+        # arrives as an unrelated red pull request. `name` is what the status
+        # check reads as, so bumping an image does not rename the check that
+        # branch protection requires.
+        include:
+          - name: Ubuntu
+            os: ubuntu-24.04
+          - name: macOS
+            os: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The install scripts are the only package list in the project. Spelling
+      # the packages out here again is how a runner and a developer machine
+      # drift apart -- and it is the macOS side that carries the subtleties
+      # (eigen@3 rather than eigen).
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: ./scripts/install_deps_ubuntu.sh --groups build
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/install_deps_macos.sh --groups build
+
+      # Logged because a runner-image refresh moves these under us, and version
+      # skew is the first thing to check when one platform alone goes red.
+      - name: Toolchain
+        run: |
+          c++ --version
+          cmake --version
+
+      - name: Configure
+        run: cmake --preset cpu
+
+      - name: Build
+        run: cmake --build --preset cpu
+
+      # The preset sets noTestsAction=error, so a discovery failure is a red
+      # job rather than a green one that ran nothing.
+      - name: Test
+        run: ctest --preset cpu

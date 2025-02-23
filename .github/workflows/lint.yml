@@ -1,0 +1,42 @@
+# Style gate: clang-format.
+#
+# Its own file because it is host-independent and cheap next to a build:
+# formatting fails in well under a minute, and it says nothing a second platform
+# would say differently. Separate from build.yml so a formatting slip reports on
+# its own status check instead of behind a compile.
+#
+# The tool is installed by version. The unversioned package follows the runner
+# image, and macOS Homebrew ships a different major again -- an unpinned
+# formatter eventually means CI and a developer's editor disagree about a file
+# nobody edited.
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CAMLOC_CLANG_FORMAT: clang-format-18
+    steps:
+      - uses: actions/checkout@v4
+
+      # No build dependencies: format.sh reads the tree, it does not compile it.
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang-format-18
+
+      - name: Check formatting
+        run: ./scripts/format.sh --check

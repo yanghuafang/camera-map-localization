@@ -35,7 +35,8 @@ From a clean machine:
 ./scripts/install_deps_ubuntu.sh    # apt
 ```
 
-Both take `--dry-run` to print the package list and exit.
+Both take `--dry-run` to print the package list and exit, and `--groups LIST`
+to install a subset — CI takes only what each job uses.
 
 ## Third-party dependencies
 
@@ -131,10 +132,18 @@ is where it is implemented.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
+| `CAMLOC_WERROR` | `OFF` | Treat compiler warnings as errors |
 
 The tree builds warning-free under `-Wall -Wextra`, which is always on for
 cam_loc's own targets (the dependencies arrive as imported targets and keep
-their own settings).
+their own settings). `CAMLOC_WERROR` is off by default and not enabled in CI:
+`-Wall` means something different to each compiler in the matrix, so gating on
+it would turn a compiler upgrade into a red build on unrelated pull requests.
+Turn it on locally when you want the enforcement:
+
+```bash
+cmake -S . -B ../camera-map-localization-build -DCAMLOC_WERROR=ON
+```
 
 ### Targets produced
 
@@ -147,3 +156,42 @@ their own settings).
 
 - **`Missing dependencies:` at configure time:** run `./scripts/install_deps_macos.sh` or `./scripts/install_deps_ubuntu.sh`. The message lists each missing library with its Homebrew and apt package name.
 - **CMake from another directory:** always pass the source tree explicitly, e.g. `cmake -S . -B <dir>` (all `scripts/*.sh` do this).
+
+## Continuous integration
+
+GitHub Actions splits the checks across workflows by cadence and blast radius, not by topic.
+Each job reports its own status check; branch protection lists them individually, so a new
+matrix leg has to be added there before it gates anything.
+
+| Workflow | Check | What it runs |
+|----------|-------|--------------|
+| [`Lint`](../.github/workflows/lint.yml) | `clang-format` | `scripts/format.sh --check`, pinned to `clang-format-18` |
+| [`Build`](../.github/workflows/build.yml) | `Ubuntu` | `cpu` preset: build and `ctest` |
+| | `macOS` | the same, under Apple Clang |
+
+`Lint` is its own file because its findings do not depend on the host and the job needs no
+compile, so a formatting slip reports in under a minute rather than behind a build. The tool
+is installed by version: the unversioned package follows the runner image, and an unpinned
+formatter eventually has CI and an editor disagree about a file nobody edited. The runner
+images are pinned for the same reason.
+
+Each job installs only what it uses: `scripts/install_deps_ubuntu.sh --groups build` for the
+builds, and a version-pinned `clang-format-18` for the style job. The install scripts remain
+the only package list in the project.
+
+No workflow file contains a compiler or CMake flag. Every configuration is a preset in
+[`CMakePresets.json`](../CMakePresets.json), which is what makes a red job reproducible:
+
+```bash
+cmake --preset cpu
+cmake --build --preset cpu
+ctest --preset cpu
+```
+
+Run `cmake --list-presets` for the full set.
+
+Local equivalent of the whole sweep, in order:
+
+```bash
+./scripts/ci.sh
+```

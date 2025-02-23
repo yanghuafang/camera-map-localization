@@ -6,8 +6,8 @@ All scripts assume repository root as working directory (they resolve paths rela
 
 | Script | Purpose |
 |--------|---------|
-| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 googletest llvm`, plus an Xcode Command Line Tools check |
-| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev libgtest-dev clang-format` |
+| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 googletest llvm`, plus an Xcode Command Line Tools check. `--groups build,style` installs a subset; CI takes only what each job uses |
+| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev libgtest-dev clang-format`. `--groups build,style` installs a subset; CI takes only what each job uses |
 
 Both take `--dry-run`. Between them they install everything the build links
 against, so the configure itself needs no network. Neither installs CUDA or
@@ -32,7 +32,7 @@ overrides the scheme.
 |--------|---------|
 | `format.sh` | `clang-format` over `src/`, `include/` and `tests/`, plus a trailing-whitespace strip that also covers the scripts, docs and CMakeLists; `--check` reports without writing |
 
-It is run by `ci.sh`:
+It is run by `ci.sh` and by CI:
 
 ```bash
 brew install llvm              # macOS — Xcode ships it not

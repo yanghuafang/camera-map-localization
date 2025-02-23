@@ -1,0 +1,68 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CAMLOC_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "cpu",
+      "displayName": "CPU (Release)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "CPU (Debug)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "cpu",
+      "configurePreset": "cpu"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "cpu",
+      "inherits": "default",
+      "configurePreset": "cpu"
+    },
+    {
+      "name": "debug",
+      "inherits": "default",
+      "configurePreset": "debug"
+    }
+  ]
+}

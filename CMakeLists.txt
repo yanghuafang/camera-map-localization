@@ -77,6 +77,14 @@ endif()
 # dependencies arrive as imported targets carrying their own interface flags.
 add_compile_options(-Wall -Wextra)
 
+# Opt-in and not gated in CI: the tree is clean under -Werror here, but -Wall
+# differs between compilers and releases, so gating would turn a toolchain
+# upgrade into a red build on unrelated pull requests.
+option(CAMLOC_WERROR "Treat compiler warnings as errors" OFF)
+if(CAMLOC_WERROR)
+  add_compile_options(-Werror)
+endif()
+
 add_subdirectory(src)
 
 if(CAMLOC_BUILD_TESTS)

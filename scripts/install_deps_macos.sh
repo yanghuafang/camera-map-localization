@@ -29,21 +29,27 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat <<'USAGE'
-Usage: install_deps_macos.sh [--dry-run]
+Usage: install_deps_macos.sh [--groups LIST] [--dry-run]
 
-Install everything needed to build the project on macOS, including the C++
-libraries. Eigen comes from eigen@3 (3.4.1); the unversioned formula is 5.x,
-which this project does not build against.
+Install everything needed to build, test and lint the project on macOS,
+including the C++ libraries. Eigen comes from eigen@3 (3.4.1); the unversioned
+formula is 5.x, which this project does not build against.
 
 Options:
+  --groups LIST  Comma-separated subset to install; default is all of them.
+                 build  cmake, ninja and the C++ libraries
+                 style  llvm (clang-format)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
 USAGE
 }
 
 dry_run=false
+groups=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --groups) groups="${2:-}"; shift ;;
+    --groups=*) groups="${1#*=}" ;;
     --dry-run) dry_run=true ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
@@ -57,12 +63,34 @@ if [[ "$(uname -s)" != Darwin ]]; then
   exit 1
 fi
 
-PACKAGES=(
+# Grouped so a caller can take only what it needs -- the formatting job needs
+# neither a compiler nor the libraries, and installing them anyway is minutes of
+# every run spent on packages the job never calls.
+GROUP_build=(
   cmake ninja        # build
   eigen@3            # Eigen3::Eigen -- 3.4.1; the unversioned formula is 5.x
   googletest         # GTest::gtest_main
-  llvm               # clang-format; Xcode ships none
 )
+GROUP_style=(llvm)   # clang-format
+
+ALL_GROUPS=(build style)
+: "${groups:=}"
+if [[ -z "${groups}" ]]; then
+  selected=("${ALL_GROUPS[@]}")
+else
+  IFS=',' read -r -a selected <<< "${groups}"
+fi
+
+PACKAGES=()
+for group in "${selected[@]}"; do
+  var="GROUP_${group}[@]"
+  if [[ -z "${!var+set}" ]]; then
+    echo "Unknown group: ${group}" >&2
+    echo "Known groups: ${ALL_GROUPS[*]}" >&2
+    exit 1
+  fi
+  PACKAGES+=("${!var}")
+done
 
 if [[ "${dry_run}" == true ]]; then
   echo "Would install with Homebrew: ${PACKAGES[*]}"
