@@ -49,6 +49,35 @@ camloc_build_dir() {
   echo "$(cd "${root}/.." && pwd)/${dir}"
 }
 
+# Dataset directory, as a sibling of the repository.
+#
+#   camloc_data_dir "${ROOT}"   -> ../camera-map-localization-data
+#
+# Holds the downloaded and generated datasets, and the output the apps write.
+#
+# Outside the repository for the same reasons as the build directories, plus one
+# of its own: KITTI's velodyne set alone is ~80 GB, and a dataset that large
+# inside a working tree makes every `git status`, every editor index and every
+# rsync pay for it. Nothing here is ours to version -- it is downloaded or
+# regenerated -- so the repository is better off not having a place to put it.
+#
+# CAMLOC_DATA_DIR overrides the scheme.
+camloc_data_dir() {
+  local root="$1"
+  if [[ -n "${CAMLOC_DATA_DIR:-}" ]]; then
+    echo "${CAMLOC_DATA_DIR}"
+    return
+  fi
+  local name
+  name="$(basename "${root}")"
+  local dir
+  dir="$(cd "${root}/.." && pwd)/${name}-data"
+  # Created here rather than at each call site: every caller either writes into
+  # it or looks for something under it.
+  mkdir -p "${dir}"
+  echo "${dir}"
+}
+
 # Resolve a clang tool (clang-format) and echo its path.
 #
 # Order: CAMLOC_CLANG_FORMAT override, the Homebrew llvm keg, then PATH. The keg

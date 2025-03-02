@@ -16,6 +16,8 @@
 # lib.sh resolves the tool through `brew --prefix llvm` rather than expecting it
 # on PATH.
 #
+# curl and unzip ship with macOS, so the download scripts need nothing here.
+#
 # Not installed here, and why:
 #   CUDA   — unavailable on macOS.
 #   ROS 2  — a large opt-in with its own vendor instructions.

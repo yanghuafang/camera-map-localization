@@ -1,5 +1,7 @@
 add_library(cam_loc_core
   core/math.cc
+  kitti/types.cc
+  kitti/calib_parser.cc
 )
 
 target_include_directories(cam_loc_core

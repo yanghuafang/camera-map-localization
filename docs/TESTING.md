@@ -25,7 +25,7 @@ ctest --test-dir "$B" --output-on-failure
 | Area | Examples |
 |------|----------|
 | Frames | `FramesTest` — the cam0 ↔ vehicle convention everything geometric rests on |
-| Math | `MathTest` — relative transforms and sequence id formatting |
+| Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
 
 ## Style gates
 

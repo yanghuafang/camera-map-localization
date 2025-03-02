@@ -33,6 +33,7 @@ Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
                  build  toolchain and the C++ libraries
                  style  clang-format
+                 data   curl, unzip (scripts/download_*.sh)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
 USAGE
@@ -81,8 +82,10 @@ GROUP_build=(
   libgtest-dev
 )
 GROUP_style=(clang-format)
+# scripts/download_*.sh
+GROUP_data=(curl unzip)
 
-ALL_GROUPS=(build style)
+ALL_GROUPS=(build style data)
 : "${groups:=}"
 if [[ -z "${groups}" ]]; then
   selected=("${ALL_GROUPS[@]}")
