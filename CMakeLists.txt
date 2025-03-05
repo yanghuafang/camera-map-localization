@@ -46,6 +46,11 @@ if(NOT TARGET Eigen3::Eigen)
   list(APPEND camloc_missing "Eigen >= 3.4   (brew: eigen@3, apt: libeigen3-dev)")
 endif()
 
+find_package(nlohmann_json 3.11 QUIET)
+if(NOT TARGET nlohmann_json::nlohmann_json)
+  list(APPEND camloc_missing "nlohmann/json  (brew: nlohmann-json, apt: nlohmann-json3-dev)")
+endif()
+
 if(CAMLOC_BUILD_TESTS)
   find_package(GTest QUIET)
   if(NOT TARGET GTest::gtest_main)
@@ -65,7 +70,7 @@ endif()
 # Say what was found. There is one route now, but the versions still differ
 # between machines -- apt has Eigen 3.4.0 where Homebrew has 3.4.1 -- and a
 # build that behaves differently on two hosts starts here.
-message(STATUS "Eigen ${Eigen3_VERSION}")
+message(STATUS "Eigen ${Eigen3_VERSION}, nlohmann/json ${nlohmann_json_VERSION}")
 
 if(CAMLOC_BUILD_TESTS)
   message(STATUS "GoogleTest ${GTest_VERSION}")

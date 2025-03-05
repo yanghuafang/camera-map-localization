@@ -79,6 +79,7 @@ GROUP_build=(
   git
   # C++ libraries the project links against
   libeigen3-dev
+  nlohmann-json3-dev
   libgtest-dev
 )
 GROUP_style=(clang-format)

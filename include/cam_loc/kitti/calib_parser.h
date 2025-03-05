@@ -1,7 +1,7 @@
 #ifndef CAM_LOC_KITTI_CALIB_PARSER_H_
 #define CAM_LOC_KITTI_CALIB_PARSER_H_
 
-/// KITTI dataset I/O: calibration, poses, and path resolution.
+/// KITTI dataset I/O: calibration, poses, perception JSON, and path resolution.
 ///
 /// The path helpers probe the two odometry layouts in the wild — poses under
 /// `poses/` or under `dataset/poses/` — and return the first that exists.
@@ -35,6 +35,10 @@ std::string ResolveCalibPath(const std::string& kitti_root, int sequence);
 /// Resolve cam0 grayscale image `dataset/sequences/XX/image_0/NNNNNN.png`.
 std::string ResolveImagePath(const std::string& kitti_root, int sequence,
                              int frame);
+
+/// Load one frame of perception polylines. See docs/KITTI_DATA.md for the
+/// schema.
+Status LoadPerceptionJson(const std::string& path, FramePerception& out);
 
 /// Build the per-frame EKF input from a pose sequence.
 ///

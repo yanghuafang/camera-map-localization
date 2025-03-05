@@ -71,6 +71,7 @@ fi
 GROUP_build=(
   cmake ninja        # build
   eigen@3            # Eigen3::Eigen -- 3.4.1; the unversioned formula is 5.x
+  nlohmann-json      # nlohmann_json::nlohmann_json
   googletest         # GTest::gtest_main
 )
 GROUP_style=(llvm)   # clang-format

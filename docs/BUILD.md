@@ -45,6 +45,7 @@ Resolved from the **system package manager**:
 | Library | Homebrew | apt | Used for |
 |---------|----------|-----|----------|
 | Eigen | `eigen@3` 3.4.1 ✓ | `libeigen3-dev` 3.4.0 ✓ | Linear algebra |
+| nlohmann/json | `nlohmann-json` 3.12 ✓ | `nlohmann-json3-dev` 3.11.3 ✓ | Perception JSON |
 | GoogleTest | `googletest` 1.18 ✓ | `libgtest-dev` 1.17 ✓ | Unit tests |
 
 With them present the configure needs **no network** — on Ubuntu it drops from
@@ -73,7 +74,7 @@ script that fixes it.
 ```
 CMake Error at CMakeLists.txt:...
   Missing dependencies:
-    Eigen >= 3.4   (brew: eigen@3, apt: libeigen3-dev)
+    nlohmann/json  (brew: nlohmann-json, apt: nlohmann-json3-dev)
 
   Install them with:
     ./scripts/install_deps_macos.sh     (macOS)
@@ -84,7 +85,7 @@ The configure reports what it resolved, because the versions differ between
 machines:
 
 ```
--- Eigen 3.4.1
+-- Eigen 3.4.1, nlohmann/json 3.12.0
 -- GoogleTest 1.18.0
 ```
 
