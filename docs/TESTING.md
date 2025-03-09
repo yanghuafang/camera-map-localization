@@ -26,6 +26,7 @@ ctest --test-dir "$B" --output-on-failure
 |------|----------|
 | Frames | `FramesTest` — the cam0 ↔ vehicle convention everything geometric rests on |
 | Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
+| Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted |
 | Perception | `PerceptionJsonTest` |
 
 ## Style gates

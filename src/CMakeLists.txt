@@ -1,8 +1,12 @@
 add_library(cam_loc_core
   core/math.cc
+  core/random.cc
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc
+  map/polyline_map.cc
+  map/map_georef.cc
+  map/trajectory_corridor_map.cc
 )
 
 target_include_directories(cam_loc_core

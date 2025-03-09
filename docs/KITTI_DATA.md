@@ -22,6 +22,9 @@ Which artifacts are downloaded, which are generated, and by what.
 | `dataset/sequences/XX/calib.txt` | KITTI Odometry | same script | Intrinsics, and the velodyne→cam0 extrinsic |
 | `dataset/sequences/XX/image_0/*.png` | KITTI Odometry (gray archive) | Manual download, **optional** | Visualization background only — never an algorithm input |
 | `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | Produced offline | 2-D image-space perception: lanes, road edges, poles, signs |
+| `<repo>-data/smoke_kitti/` | — | `scripts/prepare_smoke_kitti.sh [frames]` — synthesized, no download | A straight synthetic sequence for the smoke test |
+| Trajectory corridor map | derived | C++ `TrajectoryCorridorMap`, from the GT poses at run time | 3-D world map: lane geometry on the road, plus poles and signs |
+| `<repo>-data/map/<seq>/*.json` | user-supplied | Exported by any external tool | 3-D world map |
 
 ## Directory layout (expected)
 
@@ -37,7 +40,16 @@ camera-map-localization-data/
     poses/00.txt
   perception/                       # produced offline
     00/000000.lanes.json
+  map/                              # optional override
+    00/corridor.map.json
+  smoke_kitti/                      # scripts/prepare_smoke_kitti.sh
 ```
+
+The default map is built from ground-truth poses, so a run against it is a
+closed loop by construction: the map comes from GT and matching against it
+recovers GT. That measures the backend — whether the search, the frames and the
+filter agree — and not localization accuracy. KITTI Odometry ships no HD map,
+which is why the stand-in exists.
 
 ## calib.txt parsing
 
@@ -91,3 +103,24 @@ landmark class costs an enumerator and nothing else.
 Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
 `solid`, `dashed`, `edge` are also accepted on read). Points are **rectified
 image coordinates** (KITTI cam0, via `P0`).
+
+## Map (trajectory corridor)
+
+Auto-generated at runtime from GT poses if no file is provided:
+`TrajectoryCorridorMap` lays two solid lane boundaries and a dashed centreline
+on the road surface, and places poles and signs beside it. The upright
+landmarks are the point of it — lane geometry runs parallel to travel, so it
+pins the vehicle laterally and in heading but says almost nothing about where
+along the road it is.
+
+Optional file `<repo>-data/map/<seq>/corridor.map.json`:
+
+```json
+{
+  "polylines": [
+    {"id": 0, "type": "lane_solid", "points": [[x,y,z], ...]}
+  ]
+}
+```
+
+Points in **world frame** (same as KITTI pose world).
