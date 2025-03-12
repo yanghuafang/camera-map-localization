@@ -7,6 +7,7 @@ add_executable(cam_loc_tests
   pose_reader_test.cc
   perception_json_test.cc
   corridor_map_test.cc
+  osm_map_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)

@@ -25,6 +25,7 @@ Which artifacts are downloaded, which are generated, and by what.
 | `<repo>-data/smoke_kitti/` | — | `scripts/prepare_smoke_kitti.sh [frames]` — synthesized, no download | A straight synthetic sequence for the smoke test |
 | Trajectory corridor map | derived | C++ `TrajectoryCorridorMap`, from the GT poses at run time | 3-D world map: lane geometry on the road, plus poles and signs |
 | `<repo>-data/map/<seq>/*.json` | user-supplied | Exported by any external tool | 3-D world map |
+| `*.osm` + `georef.json` | OpenStreetMap | User-supplied extract | 3-D world map, via `MapGeoref` |
 
 ## Directory layout (expected)
 
@@ -124,3 +125,35 @@ Optional file `<repo>-data/map/<seq>/corridor.map.json`:
 ```
 
 Points in **world frame** (same as KITTI pose world).
+
+`CreateMapLoader` picks the source from the path: empty means the corridor,
+`.osm` / `.xml` means native OSM, anything else is read as world-frame JSON.
+
+### Native OSM + georef
+
+```bash
+--map-path extract.osm \
+  --map-georef "$D"/map/00/georef.json \
+  --map-align-yaw   # optional: align +X to frame-0 motion
+```
+
+`georef.json`:
+
+```json
+{
+  "origin_lat_deg": 49.0,
+  "origin_lon_deg": 8.4,
+  "origin_alt_m": 0,
+  "world_yaw_deg": 0
+}
+```
+
+`origin_lat/lon` is the geographic point that corresponds to world `(0,0,0)`.
+`world_yaw_deg` rotates the local East/North plane so the map's forward axis
+lines up with the sequence heading; the result is cam0 coordinates (X right,
+Y down, Z forward), the same frame as the poses.
+
+OSM ways with `highway=*`, `barrier=*`, or `man_made=kerb` are imported as polylines.
+
+JSON may include a top-level `"georef"` block; per-polyline `"coord_frame": "wgs84"`
+stores `[lat_deg, lon_deg, alt_m]` instead of world XYZ.

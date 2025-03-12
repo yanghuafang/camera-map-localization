@@ -6,6 +6,9 @@ add_library(cam_loc_core
   kitti/perception_loader.cc
   map/polyline_map.cc
   map/map_georef.cc
+  map/osm_xml_parser.cc
+  map/osm_map_loader.cc
+  map/map_loader_util.cc
   map/trajectory_corridor_map.cc
 )
 
