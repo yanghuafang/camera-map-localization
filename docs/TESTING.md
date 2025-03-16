@@ -28,6 +28,7 @@ ctest --test-dir "$B" --output-on-failure
 | Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
 | Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted; `OsmMapTest` — JSON, OSM XML and georef |
 | Perception | `PerceptionJsonTest` |
+| Core matching | `DistanceTransformTest` |
 
 ## Style gates
 
