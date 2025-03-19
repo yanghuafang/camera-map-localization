@@ -22,9 +22,9 @@ namespace cam_loc::core {
 /// rather than roll about the optical axis.
 ///
 /// The two differ by a fixed axis permutation, with no translation: cam0 sits
-/// at the vehicle origin by definition here. The one distance that does matter
-/// — the camera's height above the road — is a property of the road, not of
-/// the frames, and is carried separately.
+/// at the vehicle origin by definition here, and the one distance that does
+/// matter — the camera's height above the road — is carried by Projection as
+/// `ground_height_m` rather than folded in as an extrinsic.
 ///
 /// Everything below is `constexpr`-friendly and allocation-free; these run in
 /// inner loops.
