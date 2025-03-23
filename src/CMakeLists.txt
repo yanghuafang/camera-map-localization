@@ -3,6 +3,9 @@ add_library(cam_loc_core
   core/random.cc
   core/distance_transform_cpu.cc
   core/projection.cc
+  core/cost_grid.cc
+  core/cost_quadratic.cc
+  core/cost_modes.cc
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc
