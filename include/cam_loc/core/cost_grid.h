@@ -54,8 +54,8 @@ class CostGrid {
   /// Trilinear sample at a fractional offset in the plane frame.
   ///
   /// @return Interpolated cost. Offsets outside the grid read the border value
-  ///         instead of extrapolating, so a caller sampling past the edge gets
-  ///         a bounded answer rather than a divergent one.
+  ///         instead of extrapolating, which is what lets temporal aggregation
+  ///         sample a history cell whose warped offset has left the grid.
   float SampleContinuous(double x_m, double y_m, double yaw_rad) const;
 
   const std::vector<float>& data() const { return costs_; }

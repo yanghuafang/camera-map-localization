@@ -62,7 +62,8 @@ void CostGrid::OffsetToNearestIndex(const Vec3& offset, int& ix, int& iy,
 float CostGrid::SampleContinuous(double x_m, double y_m, double yaw_rad) const {
   // Trilinear read at a fractional offset. Indices are clamped to the border,
   // so offsets outside the sampled range hold the edge value instead of
-  // extrapolating.
+  // extrapolating — this is what lets temporal aggregation sample a history
+  // cell whose warped offset falls off the current grid.
   const double fx = x_m / step_x_ + nx_;
   const double fy = y_m / step_y_ + ny_;
   const double fw = yaw_rad / step_yaw_ + nw_;
