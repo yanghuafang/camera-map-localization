@@ -26,8 +26,8 @@ namespace cam_loc::core {
 /// matter — the camera's height above the road — is carried by Projection as
 /// `ground_height_m` rather than folded in as an extrinsic.
 ///
-/// Everything below is `constexpr`-friendly and allocation-free; these run in
-/// inner loops.
+/// Everything below is `constexpr`-friendly and allocation-free; these are
+/// called once per grid cell.
 struct Frames {
   /// Rotation taking a vehicle-frame vector into cam0.
   ///
@@ -65,8 +65,8 @@ struct Frames {
   ///
   /// This is `R_cam0_vehicle · SE2(x, y, yaw) · R_vehicle_cam0` written out:
   /// the translation becomes (−y, 0, x) and the rotation becomes a rotation
-  /// about cam0 −Y. Spelled as a closed form rather than three matrix products
-  /// because it runs in an inner loop.
+  /// about cam0 −Y. It is spelled as a closed form rather than three matrix
+  /// products because it runs once per grid cell.
   static Mat44 OffsetToCam0Transform(double x_m, double y_m, double yaw_rad) {
     const double c = std::cos(yaw_rad);
     const double s = std::sin(yaw_rad);

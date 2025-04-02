@@ -37,6 +37,17 @@ int FramePerception::CountOf(PolylineType type) const {
   return n;
 }
 
+bool IsGroundPlaneType(PolylineType t) {
+  switch (t) {
+    case PolylineType::kLaneSolid:
+    case PolylineType::kLaneDashed:
+    case PolylineType::kRoadEdge:
+      return true;
+    default:
+      return false;
+  }
+}
+
 Eigen::Matrix3d Calibration::IntrinsicCam0() const {
   Eigen::Matrix3d K = Eigen::Matrix3d::Identity();
   K(0, 0) = P0(0, 0);

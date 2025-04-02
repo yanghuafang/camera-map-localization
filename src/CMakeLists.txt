@@ -7,6 +7,7 @@ add_library(cam_loc_core
   core/cost_quadratic.cc
   core/cost_modes.cc
   core/cost_aggregator.cc
+  core/pose_sampler.cc
   perception/synthesize.cc
   kitti/types.cc
   kitti/calib_parser.cc

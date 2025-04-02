@@ -11,6 +11,8 @@ add_executable(cam_loc_tests
   distance_transform_test.cc
   cost_quadratic_test.cc
   cost_modes_test.cc
+  parallel_for_test.cc
+  pose_sampler_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)

@@ -15,6 +15,10 @@
 namespace cam_loc::kitti {
 
 /// Semantic class of a map or perception polyline.
+///
+/// Each class that takes part in data association gets its own
+/// distance-transform label channel, so a map point can only match perception
+/// of its own class. kUnknown shares the unlabelled channel 0.
 enum class PolylineType : uint8_t {
   kLaneSolid,
   kLaneDashed,
@@ -30,6 +34,14 @@ PolylineType PolylineTypeFromString(const std::string& s);
 /// @return The canonical spelling, e.g. "lane_solid". PolylineTypeFromString
 ///         also accepts the short forms ("solid", "dashed", "edge").
 std::string PolylineTypeToString(PolylineType t);
+
+/// Whether a class lies on the road surface.
+///
+/// Inverse-perspective mapping assumes the point is on the road, so only these
+/// classes can be scored in the bird's-eye branch; a pole or a sign put through
+/// it would land at whatever range that assumption implies rather than where it
+/// is. Elevated classes are scored in the image branch alone.
+bool IsGroundPlaneType(PolylineType t);
 
 /// Camera intrinsics/extrinsics from KITTI calib.txt (cam0 + velodyne).
 struct Calibration {
@@ -72,7 +84,7 @@ struct Egomotion {
 struct Polyline2D {
   PolylineType type = PolylineType::kUnknown;
   /// Rectified cam0 image pixels (u, v), via Calibration::P0. 2-D: a pixel
-  /// carries no range.
+  /// carries no range, so these can only be scored in the image branch.
   std::vector<Vec2> points;
 };
 
