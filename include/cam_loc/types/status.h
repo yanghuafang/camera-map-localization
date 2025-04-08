@@ -30,6 +30,14 @@ Mat44 InvertRigid(const Mat44& T);
 /// T_curr_prev.
 Mat44 RelativeTransform(const Mat44& T_world_prev, const Mat44& T_world_curr);
 
+/// SO(3) logarithm: rotation matrix to an angle-axis vector (axis * angle).
+///
+/// @return The rotation as `axis * angle`, radians; zero for identity.
+/// @note Shared rather than local to the filter, because a rotation error and
+///       the filter residual it is compared against have to be formed the same
+///       way for the comparison to mean anything.
+Vec3 RotationToAngleAxis(const Eigen::Matrix3d& R);
+
 /// Format sequence id as two digits (e.g. 0 -> "00").
 std::string FormatSequenceId(int sequence);
 

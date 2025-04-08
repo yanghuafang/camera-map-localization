@@ -69,11 +69,47 @@ struct AdaptiveExtentParams {
   int reexpand_frames = 10;
 };
 
+/// Growth of pose uncertainty per metre travelled, i.e. how good the odometry
+/// driving the prediction step is believed to be.
+///
+/// Per metre, not per frame. Odometry error is produced by motion: a vehicle
+/// standing at a light accumulates none of it, and a per-frame process noise
+/// says the opposite -- it inflates the covariance through every stop, and the
+/// filter emerges from the light less sure of a pose that never moved.
+///
+/// The axes carry different numbers because they are not equally uncertain.
+/// Along-track scale error dominates wheel and visual odometry; sideways and
+/// vertical slip are far smaller; and heading, which is what a scale error
+/// eventually turns into position error through, is separated from roll and
+/// pitch, which a road vehicle barely accumulates.
+struct OdometryNoiseParams {
+  /// Along-track (forward) sigma as a fraction of distance travelled.
+  double along_track_sigma_per_m = 0.02;
+  /// Lateral and vertical sigma, likewise a fraction of distance.
+  double off_axis_sigma_per_m = 0.005;
+  /// Heading sigma, degrees per metre travelled.
+  double heading_sigma_deg_per_m = 0.05;
+  /// Roll and pitch sigma, degrees per metre travelled.
+  double tilt_sigma_deg_per_m = 0.01;
+  /// Uncertainty a frame adds regardless of motion, metres and degrees. Small
+  /// but not zero: a stopped vehicle is not a rigidly fixed one, and a Q that
+  /// can reach exactly zero makes the covariance singular and every downstream
+  /// gate undefined.
+  double stationary_translation_sigma_m = 0.001;
+  double stationary_rotation_sigma_deg = 0.005;
+};
+
+/// Engine configuration: grid search, cost fusion, modality toggles, and debug
+/// flags.
 /// Map-matching configuration: pose grid, image raster, cost modalities and
 /// the support gate.
 struct LocalizationParams {
   // --- Pose grid ---
   SamplingGridParams grid;
+
+  // --- Prediction ---
+  /// Process noise for the predict step, scaled by the motion it is given.
+  OdometryNoiseParams odometry;
 
   // --- Image raster ---
 

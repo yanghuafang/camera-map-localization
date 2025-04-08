@@ -1,4 +1,5 @@
-// Shared SE(3) math helpers: rigid inversion and relative transforms.
+// Shared SE(3) math helpers: rigid inversion, relative transforms and the
+// rotation logarithm.
 
 #include <cstdio>
 
@@ -23,6 +24,11 @@ Mat44 InvertRigid(const Mat44& T) {
 
 Mat44 RelativeTransform(const Mat44& T_world_prev, const Mat44& T_world_curr) {
   return InvertRigid(T_world_prev) * T_world_curr;
+}
+
+Vec3 RotationToAngleAxis(const Eigen::Matrix3d& R) {
+  Eigen::AngleAxisd aa(R);
+  return aa.angle() * aa.axis();
 }
 
 std::string FormatSequenceId(int sequence) {
