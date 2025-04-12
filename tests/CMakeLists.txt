@@ -12,6 +12,7 @@ add_executable(cam_loc_tests
   cost_quadratic_test.cc
   cost_modes_test.cc
   parallel_for_test.cc
+  sampling_covariance_test.cc
   pose_sampler_test.cc
   localization_kf_test.cc
 )

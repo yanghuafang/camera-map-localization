@@ -9,6 +9,7 @@ add_library(cam_loc_core
   core/cost_modes.cc
   core/cost_aggregator.cc
   core/pose_sampler.cc
+  core/sampling_covariance.cc
   perception/synthesize.cc
   kitti/types.cc
   kitti/calib_parser.cc
