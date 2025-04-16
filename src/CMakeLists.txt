@@ -2,6 +2,7 @@ add_library(cam_loc_core
   core/math.cc
   core/random.cc
   core/localization_kf.cc
+  core/localization_engine.cc
   core/distance_transform_cpu.cc
   core/projection.cc
   core/cost_grid.cc

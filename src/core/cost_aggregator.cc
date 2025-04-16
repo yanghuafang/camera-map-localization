@@ -93,8 +93,8 @@ Status CostAggregator::Aggregate(CostGrid& current,
   // No history carried weight: leave the current frame alone. Normalizing by a
   // zero sum and blending the all-zero volume in anyway would scale the whole
   // cost surface by the fuse factor -- the argmin survives that, but the spread
-  // does not, and the spread is what tells a decisive cost surface from an
-  // ambiguous one.
+  // does not, and the spread is what the flat gate and the measurement
+  // covariance are both read from.
   if (sum_w <= 1e-6f) {
     effective_frames_ = 1.0;
     return Status::kOk;
