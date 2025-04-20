@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.18)
 
 project(camera_map_localization VERSION 0.1.0 LANGUAGES CXX)
 
+# Default to Release. Left unset, CMAKE_BUILD_TYPE is empty on single-config
+# generators, which means no -O flag at all -- not a debug build, an unoptimized
+# one. The pose grid is a triple loop over Eigen expressions, and unoptimized
+# Eigen inlines nothing: the smoke sequence runs ~200x slower that way, slow
+# enough to be mistaken for the algorithm's own cost. Multi-config generators
+# choose per build instead, so there is nothing to default there.
+get_property(camloc_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT camloc_multi_config AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+  Debug Release RelWithDebInfo MinSizeRel)
+
 option(CAMLOC_BUILD_TESTS "Build unit tests" ON)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -88,6 +101,31 @@ add_compile_options(-Wall -Wextra)
 option(CAMLOC_WERROR "Treat compiler warnings as errors" OFF)
 if(CAMLOC_WERROR)
   add_compile_options(-Werror)
+endif()
+
+# Sanitizers, as a comma-separated -fsanitize= list. Compile and link flags have
+# to agree -- an instrumented object linked without the runtime fails at link
+# time -- so both are set here. Eigen and nlohmann/json are header-only and are
+# instrumented along with the code that includes them; GoogleTest is a prebuilt
+# library and is not. That is fine: the runtime still checks every instrumented
+# translation unit, and cam_loc's own code is what these are pointed at.
+set(CAMLOC_SANITIZER "" CACHE STRING
+  "Sanitizers to enable, e.g. address, undefined, or address,undefined")
+if(CAMLOC_SANITIZER)
+  add_compile_options(-fsanitize=${CAMLOC_SANITIZER} -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=${CAMLOC_SANITIZER})
+  # Sanitizer builds are optimized (see scripts/ci.sh), and an optimized build
+  # type defines NDEBUG, which switches off Eigen's own bounds and dimension
+  # assertions -- exactly the class of bug the sanitizers are here for. Undefine
+  # it again. Directory options are appended after the per-config flags, so this
+  # wins over the -DNDEBUG that CMAKE_CXX_FLAGS_<CONFIG> supplies.
+  add_compile_options(-UNDEBUG)
+  # UBSan logs and keeps going by default, so a finding reads as a stray line in
+  # a passing run. Trapping turns it into an exit code, which is the only form
+  # CI can act on.
+  if(CAMLOC_SANITIZER MATCHES "undefined")
+    add_compile_options(-fno-sanitize-recover=undefined)
+  endif()
 endif()
 
 add_subdirectory(src)

@@ -114,7 +114,8 @@ Builds land **beside** the repository, one directory per configuration:
 ```
 camera-map-localization/                     the repository
 camera-map-localization-build/               the default configuration
-camera-map-localization-build-debug/         -DCMAKE_BUILD_TYPE=Debug
+camera-map-localization-build-debug/         ./scripts/ci.sh --debug
+camera-map-localization-build-asan-ubsan/    ./scripts/ci.sh --asan --ubsan
 ```
 
 The default configuration gets the bare name and every departure from it adds a
@@ -133,6 +134,7 @@ is where it is implemented.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
+| `CAMLOC_SANITIZER` | *(empty)* | `-fsanitize=` list, e.g. `address`, `undefined`, `address,undefined` |
 | `CAMLOC_WERROR` | `OFF` | Treat compiler warnings as errors |
 
 The tree builds warning-free under `-Wall -Wextra`, which is always on for
@@ -145,6 +147,58 @@ Turn it on locally when you want the enforcement:
 ```bash
 cmake -S . -B ../camera-map-localization-build -DCAMLOC_WERROR=ON
 ```
+
+### Build type
+
+`CMAKE_BUILD_TYPE` defaults to **`Release`**. This matters more than it usually
+does: left unset, CMake passes no `-O` flag at all, and unoptimized Eigen inlines
+nothing — the pose grid is a triple loop over Eigen expressions, and the smoke
+sequence runs at ~2.6 s/frame that way instead of ~15 ms. A timing taken from a
+build with no build type is not a measurement of the algorithm.
+
+```bash
+./scripts/ci.sh --debug   # or -DCMAKE_BUILD_TYPE=Debug by hand
+```
+
+Use `Debug` for a debugger, `RelWithDebInfo` when you want both optimization and
+symbols, and `Release` for anything you intend to quote a number from.
+
+### Sanitizers
+
+`CAMLOC_SANITIZER` sets matching compile and link flags on cam_loc's own
+targets, and adds `-fno-sanitize-recover=undefined` so a UBSan finding is an exit
+code rather than a line in an otherwise-passing log.
+
+Pair it with **`RelWithDebInfo`, not `Debug`**. The instinct is that a sanitizer
+wants `-O0` for readable frames, but this tree is Eigen expression templates:
+unoptimized it runs some two hundred times slower, and that *multiplies* with the
+sanitizer's own overhead rather than adding to it. One integration test went from
+half a second to nine minutes that way. `-O2` with `-g` and
+`-fno-omit-frame-pointer` — both set by `CAMLOC_SANITIZER` — still names frames
+worth reading, and the whole suite finishes in about eight seconds.
+
+The sanitizer build also gets `-UNDEBUG`, because an optimized build type would
+otherwise switch off Eigen's own bounds and dimension assertions — exactly the
+class of bug the sanitizers are there to catch.
+
+```bash
+B=../camera-map-localization-build-asan-ubsan
+cmake -S . -B "$B" -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DCAMLOC_SANITIZER=address,undefined
+cmake --build "$B" -j"$(getconf _NPROCESSORS_ONLN)"
+ctest --test-dir "$B" --output-on-failure
+```
+
+ThreadSanitizer is not offered: the library and tests are single-threaded,
+so it would instrument nothing, and it cannot be combined with AddressSanitizer.
+
+`./scripts/ci.sh --asan --ubsan` does the same and picks its own build directory
+so it does not force a rebuild of the plain one.
+
+Eigen and nlohmann/json are header-only, so they are instrumented along with the
+code that includes them. GoogleTest comes prebuilt from the package manager and
+is not — which is fine, since the runtime still checks every instrumented
+translation unit and cam_loc's own code is what these are pointed at.
 
 ### Targets produced
 
@@ -169,6 +223,8 @@ matrix leg has to be added there before it gates anything.
 | [`Lint`](../.github/workflows/lint.yml) | `clang-format` | `scripts/format.sh --check`, pinned to `clang-format-18` |
 | [`Build`](../.github/workflows/build.yml) | `Ubuntu` | `cpu` preset: build and `ctest` |
 | | `macOS` | the same, under Apple Clang |
+| [`Sanitizers`](../.github/workflows/sanitizers.yml) | `Ubuntu / ASan + UBSan` | `asan-ubsan` preset, then `ctest`. LeakSanitizer rides along here |
+| | `macOS / ASan + UBSan` | the same without LSan, which macOS/arm64 does not support |
 
 `Lint` is its own file because its findings do not depend on the host and the job needs no
 compile, so a formatting slip reports in under a minute rather than behind a build. The tool
@@ -180,13 +236,19 @@ Each job installs only what it uses: `scripts/install_deps_ubuntu.sh --groups bu
 builds, and a version-pinned `clang-format-18` for the style job. The install scripts remain
 the only package list in the project.
 
+The two sanitizer legs are not equivalent. LeakSanitizer rides along with ASan on Linux and is
+unsupported on macOS/arm64, so `Ubuntu / ASan + UBSan` checks strictly more; `detect_leaks` is
+left at each platform's default rather than forced, since setting it would abort every test on
+the platform that cannot honour it. Both legs run weekly as well as per push, because a
+sanitizer pass is more likely to break from a runner-image toolchain bump than from a commit.
+
 No workflow file contains a compiler or CMake flag. Every configuration is a preset in
 [`CMakePresets.json`](../CMakePresets.json), which is what makes a red job reproducible:
 
 ```bash
-cmake --preset cpu
-cmake --build --preset cpu
-ctest --preset cpu
+cmake --preset asan-ubsan
+cmake --build --preset asan-ubsan
+ctest --preset asan-ubsan
 ```
 
 Run `cmake --list-presets` for the full set.

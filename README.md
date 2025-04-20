@@ -2,6 +2,7 @@
 
 [![Lint](https://github.com/yanghuafang/camera-map-localization/actions/workflows/lint.yml/badge.svg)](https://github.com/yanghuafang/camera-map-localization/actions/workflows/lint.yml)
 [![Build](https://github.com/yanghuafang/camera-map-localization/actions/workflows/build.yml/badge.svg)](https://github.com/yanghuafang/camera-map-localization/actions/workflows/build.yml)
+[![Sanitizers](https://github.com/yanghuafang/camera-map-localization/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/yanghuafang/camera-map-localization/actions/workflows/sanitizers.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Where is the car, given what the camera sees and what the map says?**

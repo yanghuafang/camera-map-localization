@@ -17,14 +17,15 @@ ROS 2, which are large opt-ins with their own instructions.
 
 | Script | Purpose |
 |--------|---------|
-| `ci.sh` | Format, configure, build and run the unit tests. `--debug` / `--release` select the build under test; `--no-style` skips the format gate |
+| `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
 
 Builds land **beside** the repository, one directory per configuration:
-`../<repo>-build`, `../<repo>-build-debug`, and so on: the default
+`../<repo>-build`, `../<repo>-build-asan-ubsan`, and so on: the default
 configuration gets the bare name and every departure from it adds a tag. Out of
-tree so `git status` never has to look past build output. One per configuration
-so switching between build types is not a full rebuild. `CAMLOC_BUILD_DIR`
-overrides the scheme.
+tree so `git status` never has to look past build output, one per
+configuration so an instrumented binary is never the one you benchmark; see
+[BUILD.md](../docs/BUILD.md#build-directories). `CAMLOC_BUILD_DIR` overrides
+the scheme.
 
 ## Style gates
 

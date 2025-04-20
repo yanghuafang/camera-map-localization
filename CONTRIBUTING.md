@@ -25,6 +25,12 @@ sudo apt install clang-format  # Ubuntu
 
 Without it, `./scripts/ci.sh --no-style` runs the build and tests alone.
 
+Sanitizers:
+
+```bash
+./scripts/ci.sh --asan --ubsan
+```
+
 ## Pull requests
 
 1. **Branch** from `main`.
@@ -32,8 +38,9 @@ Without it, `./scripts/ci.sh --no-style` runs the build and tests alone.
 3. **Tests** — Add or update GoogleTest coverage for new behavior.
 4. **Docs** — Update the relevant guide under `docs/` and `README.md` if user-facing behavior, CLI flags, or data layout changes.
 5. **Scripts** — If you add a helper script, document it in `scripts/README.md`.
-6. **CI** — PRs must pass two workflows: [`Lint`](.github/workflows/lint.yml) (`clang-format`)
-   and [`Build`](.github/workflows/build.yml) (`Ubuntu`, `macOS`). Every configuration they
+6. **CI** — PRs must pass three workflows: [`Lint`](.github/workflows/lint.yml) (`clang-format`),
+   [`Build`](.github/workflows/build.yml) (`Ubuntu`, `macOS`) and
+   [`Sanitizers`](.github/workflows/sanitizers.yml) (`Ubuntu / ASan + UBSan`, `macOS / ASan + UBSan`). Every configuration they
    build is a preset in `CMakePresets.json`, so any red job reproduces locally with the same
    commands — e.g. `cmake --preset cpu`, `cmake --build --preset cpu`, `ctest --preset cpu`.
 

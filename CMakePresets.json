@@ -31,6 +31,16 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan (RelWithDebInfo)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-asan-ubsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CAMLOC_SANITIZER": "address,undefined"
+      }
     }
   ],
   "buildPresets": [
@@ -41,6 +51,10 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "asan-ubsan",
+      "configurePreset": "asan-ubsan"
     }
   ],
   "testPresets": [
@@ -63,6 +77,11 @@
       "name": "debug",
       "inherits": "default",
       "configurePreset": "debug"
+    },
+    {
+      "name": "asan-ubsan",
+      "inherits": "default",
+      "configurePreset": "asan-ubsan"
     }
   ]
 }
