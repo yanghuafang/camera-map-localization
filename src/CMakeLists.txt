@@ -11,7 +11,10 @@ add_library(cam_loc_core
   core/cost_aggregator.cc
   core/pose_sampler.cc
   core/sampling_covariance.cc
+  perception/adapter.cc
   perception/synthesize.cc
+  perception/noise.cc
+  perception/resolve.cc
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc

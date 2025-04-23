@@ -101,6 +101,21 @@ File: `<repo>-data/perception/<seq>/<frame:06d>.lanes.json`
 One list, not one per class: every polyline carries its own `type`, so a new
 landmark class costs an enumerator and nothing else.
 
+### Perception sources
+
+`ResolvePerception` picks one per frame:
+
+| Source | Produced by | Status |
+|--------|-------------|--------|
+| `oracle` | `SynthesizeFromMap`, projecting the local map at the **ground-truth** pose | An upper bound on the backend, not a perception result |
+| `file` | The JSON above, produced offline | Lane markings, road boundaries, poles, traffic signs |
+| `noisy` | Either of the above, plus seeded jitter, dropout and bias | — |
+| `auto` | File if present, else oracle | The default |
+
+The oracle projects at ground truth, never at the filter estimate. Projecting
+from the estimate would make the observation follow it, so the match would
+report success however far the estimate had drifted.
+
 Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
 `solid`, `dashed`, `edge` are also accepted on read). Points are **rectified
 image coordinates** (KITTI cam0, via `P0`).
