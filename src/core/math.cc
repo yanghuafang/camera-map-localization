@@ -1,8 +1,9 @@
-// Shared SE(3) math helpers: rigid inversion, relative transforms and the
-// rotation logarithm.
+// Shared SE(3) math helpers: rigid inversion, relative transforms, rotation
+// logarithm, yaw extraction.
 
-#include <cstdio>
+#include <cmath>
 
+#include "cam_loc/core/frames.h"
 #include "cam_loc/types/status.h"
 
 namespace cam_loc {
@@ -29,6 +30,14 @@ Mat44 RelativeTransform(const Mat44& T_world_prev, const Mat44& T_world_curr) {
 Vec3 RotationToAngleAxis(const Eigen::Matrix3d& R) {
   Eigen::AngleAxisd aa(R);
   return aa.angle() * aa.axis();
+}
+
+double YawFromRotation(const Eigen::Matrix3d& R) {
+  return core::Frames::HeadingFromCam0Rotation(R);
+}
+
+Vec3 ToVehicleAxes(const Vec3& v_cam0) {
+  return core::Frames::ToVehicle(v_cam0);
 }
 
 std::string FormatSequenceId(int sequence) {

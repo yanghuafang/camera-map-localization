@@ -37,6 +37,20 @@ Mat44 RelativeTransform(const Mat44& T_world_prev, const Mat44& T_world_curr);
 ///       the filter residual it is compared against have to be formed the same
 ///       way for the comparison to mean anything.
 Vec3 RotationToAngleAxis(const Eigen::Matrix3d& R);
+/// Vehicle heading of a cam0 rotation, measured about the world up axis.
+///
+/// @return Yaw in radians, in (−π, π]; zero for identity.
+/// @note Thin wrapper over core::Frames::HeadingFromCam0Rotation, kept here
+///       because the eval metrics include only this header.
+double YawFromRotation(const Eigen::Matrix3d& R);
+
+/// Resolve a cam0-frame vector onto vehicle axes.
+///
+/// @param v_cam0 Vector in cam0 (X right, Y down, Z forward).
+/// @return The same vector as `(forward, left, up)`.
+/// @note Thin wrapper over core::Frames::ToVehicle, kept here for the same
+///       reason as YawFromRotation above.
+Vec3 ToVehicleAxes(const Vec3& v_cam0);
 
 /// Format sequence id as two digits (e.g. 0 -> "00").
 std::string FormatSequenceId(int sequence);

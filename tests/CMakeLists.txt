@@ -16,6 +16,7 @@ add_executable(cam_loc_tests
   pose_sampler_test.cc
   localization_kf_test.cc
   localization_engine_test.cc
+  filter_consistency_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)
