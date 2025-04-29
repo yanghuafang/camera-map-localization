@@ -17,19 +17,37 @@ It is written to be **read**. Every non-obvious decision carries the reason it
 was made, and where the implementation falls short of its own documentation, it
 says so.
 
-## Build and test
+## Try it in three commands
 
 ```bash
 ./scripts/install_deps_macos.sh   # or install_deps_ubuntu.sh
-./scripts/ci.sh                   # configure, build, run the unit tests
+./scripts/ci.sh --no-style        # build + unit tests
+./scripts/run_smoke.sh            # localize on a synthetic sequence
 ```
 
-[BUILD.md](docs/BUILD.md) covers prerequisites and CMake options,
-[TESTING.md](docs/TESTING.md) the test suite.
+No dataset download. The smoke sequence is generated locally.
 
-## Status
+## What it does, per frame
 
-Early. Nothing here localizes anything yet.
+```
+Egomotion → EKF predict
+        ↓
+Perception polylines → distance transform
+        ↓
+Pose grid: score (forward, left, yaw) hypotheses against the map
+        ↓
+Aggregate over recent frames → argmin → sub-cell refine
+        ↓
+Gate on ambiguity and fit → EKF update
+```
+
+## Documentation
+
+- [BUILD.md](docs/BUILD.md) — prerequisites, CMake options, build directories
+- [KITTI_DATA.md](docs/KITTI_DATA.md) — data layout, formats, where each input comes from
+- [KITTI_RUN.md](docs/KITTI_RUN.md) — smoke test, download, running a sequence
+- [TESTING.md](docs/TESTING.md) — unit tests, sanitizers, style gates
+- [CONTRIBUTING.md](CONTRIBUTING.md) — style, commit convention, review gates
 
 ## License
 

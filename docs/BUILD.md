@@ -7,7 +7,7 @@
 | GitHub repository | `camera-map-localization` |
 | CMake project | `camera_map_localization` |
 | C++ namespace / headers | `cam_loc` under `include/cam_loc/` |
-| Static library | `cam_loc_core` |
+| Static libraries | `cam_loc_core` |
 | CMake options | `CAMLOC_*` |
 
 The public repo name reflects **camera map localization**; internal `cam_loc` identifiers are kept for brevity and API stability.
@@ -204,8 +204,16 @@ translation unit and cam_loc's own code is what these are pointed at.
 
 | Target | Type |
 |--------|------|
-| `cam_loc_core` | Static library — shared types and SE(3) math |
+| `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
+| `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
+| `run_sequence` | CLI executable under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
+
+Build a single app:
+
+```bash
+cmake --build build --target run_sequence
+```
 
 ## Troubleshooting
 

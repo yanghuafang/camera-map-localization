@@ -149,7 +149,7 @@ camloc_resolve_clang_tool() {
 # reads the nearest config above each file.
 camloc_source_files() {
   local root="$1"
-  find "${root}/src" "${root}/include" "${root}/tests" \
+  find "${root}/src" "${root}/include" "${root}/apps" "${root}/tests" \
     \( -type d \( -name third_party -o -name third-party -o -name thirdparty \
                   -o -name vendor -o -name external -o -name _deps \) -prune \) \
     -o \( -type f \( -name '*.cc' -o -name '*.h' \) -print \) \

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # format.sh — apply the repo's formatting rules in place.
 #
-# Two passes over src/, include/ and tests/:
+# Two passes over src/, include/, apps/ and tests/:
 #   1. clang-format against the root .clang-format (Google, 80 columns).
 #   2. trailing-whitespace strip, which also reaches what clang-format does not
 #      touch: the scripts, the CMakeLists, the docs.
@@ -65,7 +65,8 @@ list_whitespace_files() {
   find "${ROOT}/scripts" -type f -name '*.sh' | sort
   find "${ROOT}/docs" -type f -name '*.md' | sort
   find "${ROOT}" -maxdepth 1 -type f -name '*.md' | sort
-  find "${ROOT}/src" "${ROOT}/tests" -type f -name 'CMakeLists.txt' | sort
+  find "${ROOT}/src" "${ROOT}/apps" "${ROOT}/tests" \
+    -type f -name 'CMakeLists.txt' | sort
   echo "${ROOT}/CMakeLists.txt"
 }
 
