@@ -18,6 +18,9 @@ add_library(cam_loc_core
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc
+  kitti/sequence_eval.cc
+  kitti/egomotion_noise.cc
+  kitti/sequence_eval_runner.cc
   map/polyline_map.cc
   map/map_georef.cc
   map/osm_xml_parser.cc

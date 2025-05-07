@@ -60,6 +60,30 @@ camera-map-localization-data/kitti_odometry/
 ./scripts/download_kitti_odometry.sh "$D"/kitti_odometry
 ```
 
+### Quick eval
+
+```bash
+./scripts/run_real_kitti.sh
+```
+
+Or manually:
+
+```bash
+"$B"/apps/eval_sequence/eval_sequence \
+  --kitti-root "$D"/kitti_odometry \
+  --sequence 00 \
+  --max-frames 200 \
+  --skip-frames 10 \
+  --output-csv "$D"/eval_seq00.csv
+```
+
+`eval_sequence` tuning flags: `--cost-flat-threshold`, `--cost-softmax-scale`,
+`--aggregation-window`, `--noise-px`, and `--bev` to also score the bird's-eye
+branch (off by default).
+
+`--max-frames` is a **count** from `--skip-frames`, so
+`--skip-frames 10 --max-frames 80` runs frames 10 through 89.
+
 ### `run_sequence` on real data
 
 ```bash
@@ -84,5 +108,14 @@ OSM with georef: see [KITTI_DATA.md](KITTI_DATA.md#native-osm--georef).
 ## Interpreting output
 
 `run_sequence` prints the mean translation error (m) and mean yaw error (deg) vs GT.
+
+`eval_sequence` additionally reports:
+
+| Metric | Meaning |
+|--------|---------|
+| Translation RMSE (m) | root-mean-square of ‖t_est − t_gt‖ over frames (mean and max also printed) |
+| Yaw RMSE (deg) | RMS absolute yaw difference vs GT (mean also printed) |
+| Match rate | fraction of frames with an applied (non-flat) map-matching update |
+| Flat cost rate | fraction of frames where the map update was skipped (flat cost surface) |
 
 `--use-gt` injects near-perfect global measurements (KF path check). Default mode uses map matching + KF only.

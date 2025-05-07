@@ -44,6 +44,12 @@ sudo apt install clang-format  # Ubuntu
 `lib.sh` is not run directly: it holds the shared helpers (`camloc_nproc`, the
 clang-tool resolver, the source-file list) that the scripts above source.
 
+## Evaluation pipelines
+
+| Script | Purpose |
+|--------|---------|
+| `run_real_kitti.sh` | `eval_sequence` on seq 00 if odometry data present |
+
 ## Data preparation
 
 | Script | Purpose |

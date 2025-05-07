@@ -5,3 +5,4 @@ add_library(cam_loc_app_common INTERFACE)
 target_include_directories(cam_loc_app_common INTERFACE ${CMAKE_SOURCE_DIR})
 
 add_subdirectory(run_sequence)
+add_subdirectory(eval_sequence)

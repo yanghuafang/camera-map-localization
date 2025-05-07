@@ -17,6 +17,8 @@ add_executable(cam_loc_tests
   localization_kf_test.cc
   localization_engine_test.cc
   filter_consistency_test.cc
+  egomotion_noise_test.cc
+  perception_eval_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)
