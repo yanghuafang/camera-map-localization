@@ -1,0 +1,2 @@
+add_executable(eval_perception_compare main.cc)
+target_link_libraries(eval_perception_compare PRIVATE cam_loc_core cam_loc_app_common)

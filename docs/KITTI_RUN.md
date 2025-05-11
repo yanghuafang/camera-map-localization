@@ -94,6 +94,24 @@ branch (off by default).
   --max-frames 200
 ```
 
+## Perception tuning (oracle vs noisy)
+
+```bash
+"$B"/apps/eval_perception_compare/eval_perception_compare \
+  --kitti-root "$D"/kitti_odometry \
+  --perception-root "$D"/perception \
+  --sequence 00 \
+  --skip-frames 10 \
+  --max-frames 200 \
+  --noise-px 4 \
+  --use-gt-plane \
+  --output-csv "$D"/eval_perception_compare_seq00.csv
+```
+
+`--perception-mode` (`auto | file | oracle | noisy`) is accepted by
+`eval_sequence`; `eval_perception_compare` always runs oracle, file and noisy
+for comparison, so the three share one frame range and one map.
+
 ## External map
 
 ```bash

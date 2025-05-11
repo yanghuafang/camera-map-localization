@@ -3,7 +3,7 @@
 
 /// Sequence evaluation types and summary aggregation.
 ///
-/// Consumed by eval_sequence.
+/// Consumed by eval_sequence and eval_perception_compare.
 
 #include <string>
 #include <vector>

@@ -206,7 +206,7 @@ translation unit and cam_loc's own code is what these are pointed at.
 |--------|------|
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
-| `run_sequence`, `eval_sequence` | CLI executables under `<build dir>/apps/` |
+| `run_sequence`, `eval_sequence`, `eval_perception_compare` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
 
 Build a single app:
