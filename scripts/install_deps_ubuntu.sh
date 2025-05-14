@@ -81,6 +81,7 @@ GROUP_build=(
   libeigen3-dev
   nlohmann-json3-dev
   libgtest-dev
+  libstb-dev
 )
 GROUP_style=(clang-format)
 # scripts/download_*.sh
@@ -116,4 +117,4 @@ sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 
 echo ""
 echo "Ubuntu build environment ready."
-echo "  Configure and build: see ${ROOT}/docs/BUILD.md"
+echo "  Build and test:  ${ROOT}/scripts/ci.sh"

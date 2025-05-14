@@ -19,6 +19,7 @@ The public repo name reflects **camera map localization**; internal `cam_loc` id
 | Operating system | Linux or macOS (Intel or Apple Silicon) |
 | CMake | ≥ 3.18 |
 | C++ compiler | C++17 (GCC 9+, Clang 10+, or Apple Clang 12+) |
+| Git | Required (to clone this repository; on macOS also for `stb`, which has no formula) |
 
 ### Platform notes
 
@@ -45,7 +46,8 @@ Resolved from the **system package manager**:
 | Library | Homebrew | apt | Used for |
 |---------|----------|-----|----------|
 | Eigen | `eigen@3` 3.4.1 ✓ | `libeigen3-dev` 3.4.0 ✓ | Linear algebra |
-| nlohmann/json | `nlohmann-json` 3.12 ✓ | `nlohmann-json3-dev` 3.11.3 ✓ | Perception JSON |
+| nlohmann/json | `nlohmann-json` 3.12 ✓ | `nlohmann-json3-dev` 3.11.3 ✓ | Perception + map JSON |
+| stb | **no formula** — cached clone | `libstb-dev` ✓ | Image read/write |
 | GoogleTest | `googletest` 1.18 ✓ | `libgtest-dev` 1.17 ✓ | Unit tests |
 
 With them present the configure needs **no network** — on Ubuntu it drops from
@@ -64,7 +66,8 @@ with requested version "3.4".
   The version found is not compatible with the version requested.
 ```
 
-`eigen@3` is keg-only, so CMakeLists adds its prefix to `CMAKE_PREFIX_PATH`.
+`eigen@3` is keg-only, so CMakeLists adds its prefix to `CMAKE_PREFIX_PATH` —
+the same thing `scripts/lib.sh` does for the `llvm` keg.
 
 ### When a dependency is missing
 
@@ -85,7 +88,7 @@ The configure reports what it resolved, because the versions differ between
 machines:
 
 ```
--- Eigen 3.4.1, nlohmann/json 3.12.0
+-- Eigen 3.4.1, nlohmann/json 3.12.0, stb /Users/.../camera-map-localization-deps/stb
 -- GoogleTest 1.18.0
 ```
 
@@ -195,7 +198,7 @@ so it would instrument nothing, and it cannot be combined with AddressSanitizer.
 `./scripts/ci.sh --asan --ubsan` does the same and picks its own build directory
 so it does not force a rebuild of the plain one.
 
-Eigen and nlohmann/json are header-only, so they are instrumented along with the
+Eigen, nlohmann/json and stb are header-only, so they are instrumented along
 code that includes them. GoogleTest comes prebuilt from the package manager and
 is not — which is fine, since the runtime still checks every instrumented
 translation unit and cam_loc's own code is what these are pointed at.

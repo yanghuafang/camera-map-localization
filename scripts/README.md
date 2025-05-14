@@ -7,7 +7,7 @@ All scripts assume repository root as working directory (they resolve paths rela
 | Script | Purpose |
 |--------|---------|
 | `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 nlohmann-json googletest llvm`, plus an Xcode Command Line Tools check. `--groups build,style,data` installs a subset; CI takes only what each job uses |
-| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev clang-format curl unzip`. `--groups build,style,data` installs a subset; CI takes only what each job uses |
+| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev libstb-dev clang-format curl unzip`. `--groups build,style,data` installs a subset; CI takes only what each job uses |
 
 Both take `--dry-run`. Between them they install everything the build links
 against, so the configure itself needs no network. Neither installs CUDA or

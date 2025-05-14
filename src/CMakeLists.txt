@@ -15,6 +15,7 @@ add_library(cam_loc_core
   perception/synthesize.cc
   perception/noise.cc
   perception/resolve.cc
+  semantic_kitti/preprocess.cc
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc
@@ -34,6 +35,11 @@ target_include_directories(cam_loc_core
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# SYSTEM (-isystem): stb is header-only and its implementation is compiled into
+# cam_loc_core, so under -Wall -Wextra its warnings would be reported as ours.
+# -Wno-* would have hidden the same problems in cam_loc's own code.
+target_include_directories(cam_loc_core SYSTEM PRIVATE ${CAMLOC_STB_INCLUDE_DIR})
 
 target_link_libraries(cam_loc_core
   PUBLIC

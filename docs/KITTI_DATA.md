@@ -11,6 +11,7 @@ D=../camera-map-localization-data
 | Dataset | Use |
 |---------|-----|
 | KITTI Odometry (`data_odometry_*`) | Poses, calib, grayscale images |
+| Semantic KITTI (optional) | Lane, road-boundary, pole and traffic-sign extraction |
 
 ## Input provenance
 
@@ -115,6 +116,24 @@ landmark class costs an enumerator and nothing else.
 The oracle projects at ground truth, never at the filter estimate. Projecting
 from the estimate would make the observation follow it, so the match would
 report success however far the estimate had drifted.
+
+### What the datasets can and cannot give
+
+| Landmark | SemanticKITTI class | Extracted by |
+|----------|--------------------|--------------|
+| Lane marking | 60 | horizontal run scan |
+| Road boundary | edge of road (40) | leftmost/rightmost road pixel per row |
+| Pole | 80 | vertical run scan |
+| Traffic sign | 81 | vertical run scan |
+| Traffic light | **none** | — |
+| Crosswalk | **none** | — |
+
+The last two rows are not an omission. SemanticKITTI has no class for either, so
+they cannot be extracted from this dataset at any effort.
+
+The scan orientation is chosen per class: lane markings and road edges run
+across the image, poles and signs stand upright, and a horizontal scan meets a
+pole one or two pixels at a time and discards it as too short.
 
 Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
 `solid`, `dashed`, `edge` are also accepted on read). Points are **rectified

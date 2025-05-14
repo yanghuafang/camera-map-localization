@@ -16,6 +16,10 @@
 # lib.sh resolves the tool through `brew --prefix llvm` rather than expecting it
 # on PATH.
 #
+# stb has no Homebrew formula at all, so it is cloned once per machine into the
+# directory CMakeLists.txt hints at. Ubuntu packages it as libstb-dev, so this
+# step has no counterpart there.
+#
 # curl and unzip ship with macOS, so the download scripts need nothing here.
 #
 # Not installed here, and why:
@@ -34,12 +38,13 @@ usage() {
 Usage: install_deps_macos.sh [--groups LIST] [--dry-run]
 
 Install everything needed to build, test and lint the project on macOS,
-including the C++ libraries. Eigen comes from eigen@3 (3.4.1); the unversioned
+including the C++ libraries. stb has no Homebrew formula and is cloned into the
+shared source cache instead. Eigen comes from eigen@3 (3.4.1); the unversioned
 formula is 5.x, which this project does not build against.
 
 Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
-                 build  cmake, ninja and the C++ libraries
+                 build  cmake, ninja, the C++ libraries, and the stb clone
                  style  llvm (clang-format)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
@@ -95,8 +100,23 @@ for group in "${selected[@]}"; do
   PACKAGES+=("${!var}")
 done
 
+# Sources with no formula, cloned into the directory CMakeLists.txt hints at.
+# Name, URL, and the branch to track. Part of the build group: nothing else
+# needs stb, and the clone is a network round trip worth skipping when it does.
+DEPS_CACHE="$(cd "${ROOT}/.." && pwd)/camera-map-localization-deps"
+CACHED_SOURCES=()
+if [[ " ${selected[*]} " == *" build "* ]]; then
+  CACHED_SOURCES=(
+    "stb https://github.com/nothings/stb.git master"
+  )
+fi
+
 if [[ "${dry_run}" == true ]]; then
   echo "Would install with Homebrew: ${PACKAGES[*]}"
+  for entry in ${CACHED_SOURCES[@]+"${CACHED_SOURCES[@]}"}; do
+    set -- ${entry}
+    echo "Would clone $1 ($3) into ${DEPS_CACHE}/$1"
+  done
   exit 0
 fi
 
@@ -117,6 +137,29 @@ fi
 
 brew install "${PACKAGES[@]}"
 
+mkdir -p "${DEPS_CACHE}"
+for entry in ${CACHED_SOURCES[@]+"${CACHED_SOURCES[@]}"}; do
+  # Word-split deliberately: each entry is "name url tag".
+  set -- ${entry}
+  name="$1"
+  url="$2"
+  tag="$3"
+  dest="${DEPS_CACHE}/${name}"
+  if [[ -d "${dest}" ]]; then
+    echo "${name} already cached at ${dest}"
+    continue
+  fi
+  echo "Cloning ${name} ${tag} into ${dest} ..."
+  if ! git clone --depth 1 --branch "${tag}" "${url}" "${dest}"; then
+    echo "" >&2
+    echo "Could not clone ${name} from ${url}." >&2
+    echo "There is no fallback: the configure will fail until a checkout is at" >&2
+    echo "  ${dest}" >&2
+    echo "Copy one from another machine if the route to github.com is blocked." >&2
+    exit 1
+  fi
+done
+
 echo ""
 echo "macOS build environment ready."
-echo "  Configure and build: see ${ROOT}/docs/BUILD.md"
+echo "  Build and test:  ${ROOT}/scripts/ci.sh"

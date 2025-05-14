@@ -25,12 +25,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Dependencies come from the system package manager -- Homebrew on macOS, apt on
 # Ubuntu -- installed by scripts/install_deps_{macos,ubuntu}.sh.
 #
-# There is deliberately no fetch-at-configure fallback. Cloning a dependency
-# costs time and disk for every build directory created, and turns a blocked or
-# throttled route to github.com into a wall of CMake internals ending in
-# "Configuring incomplete". Requiring the packages means the configure touches
-# the network never, takes under a second, and when something is missing says
-# which script installs it.
+# There is deliberately no fetch-at-configure fallback. Cloning these four
+# repositories would cost a couple of minutes and a quarter-gigabyte for every
+# build directory created, and would turn a blocked or throttled route to
+# github.com into a wall of CMake internals ending in "Configuring incomplete".
+# Requiring the packages means the configure touches the network never, takes
+# under a second, and when something is missing says which script installs it.
 
 # Homebrew keeps versioned formulae keg-only: installed, but not linked into the
 # prefix CMake searches. eigen@3 is the one that matters -- the unversioned
@@ -64,6 +64,18 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
   list(APPEND camloc_missing "nlohmann/json  (brew: nlohmann-json, apt: nlohmann-json3-dev)")
 endif()
 
+# stb is header-only with no package config anywhere, so it is found by header
+# rather than by config file. PATH_SUFFIXES stb because apt's libstb-dev
+# installs under /usr/include/stb; HINTS because Homebrew has no stb formula at
+# all and install_deps_macos.sh clones it beside the repository instead.
+find_path(CAMLOC_STB_INCLUDE_DIR
+  NAMES stb_image.h
+  HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../camera-map-localization-deps/stb"
+  PATH_SUFFIXES stb)
+if(NOT CAMLOC_STB_INCLUDE_DIR)
+  list(APPEND camloc_missing "stb            (apt: libstb-dev; macOS: install_deps_macos.sh clones it)")
+endif()
+
 if(CAMLOC_BUILD_TESTS)
   find_package(GTest QUIET)
   if(NOT TARGET GTest::gtest_main)
@@ -83,7 +95,8 @@ endif()
 # Say what was found. There is one route now, but the versions still differ
 # between machines -- apt has Eigen 3.4.0 where Homebrew has 3.4.1 -- and a
 # build that behaves differently on two hosts starts here.
-message(STATUS "Eigen ${Eigen3_VERSION}, nlohmann/json ${nlohmann_json_VERSION}")
+message(STATUS "Eigen ${Eigen3_VERSION}, nlohmann/json ${nlohmann_json_VERSION}, "
+               "stb ${CAMLOC_STB_INCLUDE_DIR}")
 
 if(CAMLOC_BUILD_TESTS)
   message(STATUS "GoogleTest ${GTest_VERSION}")
@@ -105,10 +118,11 @@ endif()
 
 # Sanitizers, as a comma-separated -fsanitize= list. Compile and link flags have
 # to agree -- an instrumented object linked without the runtime fails at link
-# time -- so both are set here. Eigen and nlohmann/json are header-only and are
-# instrumented along with the code that includes them; GoogleTest is a prebuilt
-# library and is not. That is fine: the runtime still checks every instrumented
-# translation unit, and cam_loc's own code is what these are pointed at.
+# time -- so both are set here. Eigen, nlohmann/json and stb are header-only and
+# are instrumented along with the code that includes them; GoogleTest is a
+# prebuilt library and is not. That is fine: the runtime still checks every
+# instrumented translation unit, and cam_loc's own code is what these are
+# pointed at.
 set(CAMLOC_SANITIZER "" CACHE STRING
   "Sanitizers to enable, e.g. address, undefined, or address,undefined")
 if(CAMLOC_SANITIZER)
