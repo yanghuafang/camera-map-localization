@@ -30,7 +30,7 @@ ctest --test-dir "$B" --output-on-failure
 | Frames | `FramesTest` — the cam0 ↔ vehicle convention everything geometric rests on |
 | Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
 | Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted; `OsmMapTest` — JSON, OSM XML and georef |
-| Perception | `PerceptionJsonTest`, `SemanticKittiTest` |
+| Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest` |
 | Eval | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest` |
 | End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
 | Filter | `LocalizationKfTest` — convergence away from identity attitude, and covariance well-formedness |

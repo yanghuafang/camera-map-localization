@@ -20,6 +20,7 @@ add_executable(cam_loc_tests
   egomotion_noise_test.cc
   perception_eval_test.cc
   semantic_kitti_test.cc
+  semantic_lidar_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)

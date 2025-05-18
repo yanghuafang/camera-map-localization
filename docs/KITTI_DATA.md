@@ -21,6 +21,8 @@ Which artifacts are downloaded, which are generated, and by what.
 |----------|---------|-------------|---------|
 | `poses/XX.txt` | KITTI Odometry | `scripts/download_kitti_odometry.sh` — direct download, ~2 MB | GT pose, and the relative ego for the predict step |
 | `dataset/sequences/XX/calib.txt` | KITTI Odometry | same script | Intrinsics, and the velodyne→cam0 extrinsic |
+| `dataset/sequences/XX/velodyne/*.bin` | KITTI Odometry | Manual download (~80 GB archive) | Labelled points projected into the image |
+| `sequences/XX/labels/*.label` | Semantic KITTI | Downloaded | Per-point class for the scan above |
 | `dataset/sequences/XX/image_0/*.png` | KITTI Odometry (gray archive) | Manual download, **optional** | Visualization background only — never an algorithm input |
 | `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | Produced offline | 2-D image-space perception: lanes, road edges, poles, signs |
 | `<repo>-data/smoke_kitti/` | — | `scripts/prepare_smoke_kitti.sh [frames]` — synthesized, no download | A straight synthetic sequence for the smoke test |

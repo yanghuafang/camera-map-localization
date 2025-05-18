@@ -16,6 +16,7 @@ add_library(cam_loc_core
   perception/noise.cc
   perception/resolve.cc
   semantic_kitti/preprocess.cc
+  semantic_kitti/lidar_project.cc
   kitti/types.cc
   kitti/calib_parser.cc
   kitti/perception_loader.cc
