@@ -27,6 +27,10 @@ The public repo name reflects **camera map localization**; internal `cam_loc` id
 - **macOS** builds with the stock Apple Clang toolchain (`xcode-select --install`).
 - The `scripts/*.sh` helpers detect the CPU count portably (`nproc` on Linux, `getconf`/`sysctl` on macOS), so they run unchanged on both platforms.
 
+Optional:
+
+- **curl / unzip** — for `scripts/download_*.sh` (preinstalled on macOS)
+
 ### Installing them
 
 From a clean machine:
@@ -209,7 +213,7 @@ translation unit and cam_loc's own code is what these are pointed at.
 |--------|------|
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
-| `run_sequence`, `eval_sequence`, `eval_perception_compare` | CLI executables under `<build dir>/apps/` |
+| `run_sequence`, `eval_sequence`, `eval_perception_compare`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
 
 Build a single app:

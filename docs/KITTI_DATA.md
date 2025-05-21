@@ -22,9 +22,9 @@ Which artifacts are downloaded, which are generated, and by what.
 | `poses/XX.txt` | KITTI Odometry | `scripts/download_kitti_odometry.sh` — direct download, ~2 MB | GT pose, and the relative ego for the predict step |
 | `dataset/sequences/XX/calib.txt` | KITTI Odometry | same script | Intrinsics, and the velodyne→cam0 extrinsic |
 | `dataset/sequences/XX/velodyne/*.bin` | KITTI Odometry | Manual download (~80 GB archive) | Labelled points projected into the image |
-| `sequences/XX/labels/*.label` | Semantic KITTI | Downloaded | Per-point class for the scan above |
+| `sequences/XX/labels/*.label` | Semantic KITTI | `scripts/download_semantic_kitti_labels.sh` | Per-point class for the scan above |
 | `dataset/sequences/XX/image_0/*.png` | KITTI Odometry (gray archive) | Manual download, **optional** | Visualization background only — never an algorithm input |
-| `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | Produced offline | 2-D image-space perception: lanes, road edges, poles, signs |
+| `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | C++ `preprocess_kitti` (`--mode lidar` or `--mode png`) | 2-D image-space perception: lanes, road edges, poles, signs |
 | `<repo>-data/smoke_kitti/` | — | `scripts/prepare_smoke_kitti.sh [frames]` — synthesized, no download | A straight synthetic sequence for the smoke test |
 | Trajectory corridor map | derived | C++ `TrajectoryCorridorMap`, from the GT poses at run time | 3-D world map: lane geometry on the road, plus poles and signs |
 | `<repo>-data/map/<seq>/*.json` | user-supplied | Exported by any external tool | 3-D world map |
@@ -140,6 +140,16 @@ pole one or two pixels at a time and discards it as too short.
 Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
 `solid`, `dashed`, `edge` are also accepted on read). Points are **rectified
 image coordinates** (KITTI cam0, via `P0`).
+
+Generate with `preprocess_kitti` (`--mode lidar` or `--mode png`), which has two
+input paths:
+
+| `--mode` | Reads | Origin of that data |
+|----------|-------|---------------------|
+| `lidar` | `velodyne/NNNNNN.bin` (float32 x, y, z, intensity) + `labels/NNNNNN.label` (uint32, low 16 bits = class) | Velodyne archive (~80 GB, manual) + `scripts/download_semantic_kitti_labels.sh` |
+| `png` | `<labels-root>/<seq>/labels/NNNNNN.label` — despite the extension, a **16-bit grayscale PNG** label raster | Prepared externally |
+
+Both end at the same JSON, so the engine sees one 2-D contract either way.
 
 ## Map (trajectory corridor)
 

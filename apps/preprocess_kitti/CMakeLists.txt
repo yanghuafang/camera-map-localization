@@ -1,0 +1,2 @@
+add_executable(preprocess_kitti main.cc)
+target_link_libraries(preprocess_kitti PRIVATE cam_loc_core cam_loc_app_common)

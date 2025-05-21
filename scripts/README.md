@@ -49,6 +49,8 @@ clang-tool resolver, the source-file list) that the scripts above source.
 | Script | Purpose |
 |--------|---------|
 | `run_real_kitti.sh` | `eval_sequence` on seq 00 if odometry data present |
+| `run_perception_eval.sh` | Preprocess (if velodyne) + eval with file/auto perception |
+| `run_perception_tuning.sh` | `eval_perception_compare` oracle vs noisy |
 
 ## Data preparation
 
@@ -56,3 +58,4 @@ clang-tool resolver, the source-file list) that the scripts above source.
 |--------|---------|
 | `prepare_smoke_kitti.sh [frames]` | Generate `<repo>-data/smoke_kitti/` (default 120 poses along +Z at 0.5 m/frame, plus calib) |
 | `download_kitti_odometry.sh [dest]` | Fetch poses + calib zips into `<repo>-data/kitti_odometry/`; `--force` re-fetches |
+| `download_semantic_kitti_labels.sh [kitti_root]` | Fetch Semantic KITTI label archives |
