@@ -3,13 +3,34 @@
 
 #include "cam_loc/core/cost_aggregator.h"
 
+#include "cam_loc/core/frames.h"
+
+#ifdef CAMLOC_CUDA_ENABLED
+#include "cam_loc/cuda/distance_transform.h"
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
 
-#include "cam_loc/core/frames.h"
-
 namespace cam_loc::core {
+
+namespace {
+
+#ifdef CAMLOC_CUDA_ENABLED
+// Flattens a pose into the row-major float[16] the kernel launchers take. Only
+// the GPU path needs it, and it is compiled only there: left visible in a
+// CPU-only build it is an unused function, which -Wall reports.
+void PackMat44RowMajor(const Mat44& T, float out[16]) {
+  for (int r = 0; r < 4; ++r) {
+    for (int c = 0; c < 4; ++c) {
+      out[r * 4 + c] = static_cast<float>(T(r, c));
+    }
+  }
+}
+#endif
+
+}  // namespace
 
 CostAggregator::CostAggregator(const AggregationParams& params)
     : params_(params) {}
@@ -21,7 +42,7 @@ float CostAggregator::FrameWeight(double age_m) const {
 
 Status CostAggregator::Aggregate(CostGrid& current,
                                  const Mat44& T_world_plane_curr,
-                                 double travel_m) {
+                                 double travel_m, bool use_gpu) {
   effective_frames_ = 1.0;
   if (history_.empty()) {
     return Status::kOk;
@@ -52,6 +73,51 @@ Status CostAggregator::Aggregate(CostGrid& current,
     if (w > 0.f) weights.push_back(w);
   }
   effective_frames_ = EffectiveFrames(weights, kFuseAlpha);
+
+#ifdef CAMLOC_CUDA_ENABLED
+  if (use_gpu && cuda::IsAvailable()) {
+    std::vector<float> hist_inv_T;
+    std::vector<float> hist_weights;
+    std::vector<float> hist_costs;
+    hist_inv_T.reserve(history_.size() * 16);
+    hist_weights.reserve(history_.size());
+    const int num_cells = current.DimX() * current.DimY() * current.DimW();
+    hist_costs.reserve(history_.size() * static_cast<size_t>(num_cells));
+
+    for (const auto& hist : history_) {
+      const float w = usable_weight(hist);
+      if (w <= 0.f) continue;
+      const Mat44 inv_T = hist.T_world_plane.inverse();
+      float packed[16];
+      PackMat44RowMajor(inv_T, packed);
+      hist_inv_T.insert(hist_inv_T.end(), packed, packed + 16);
+      hist_weights.push_back(w);
+      hist_costs.insert(hist_costs.end(), hist.costs->data().begin(),
+                        hist.costs->data().end());
+    }
+
+    if (!hist_weights.empty()) {
+      float T_curr[16];
+      PackMat44RowMajor(T_world_plane_curr, T_curr);
+      cuda::CostAggregateGpuParams gp;
+      gp.dim_x = current.DimX();
+      gp.dim_y = current.DimY();
+      gp.dim_w = current.DimW();
+      gp.nx = (gp.dim_x - 1) / 2;
+      gp.ny = (gp.dim_y - 1) / 2;
+      gp.nw = (gp.dim_w - 1) / 2;
+      gp.step_x = static_cast<float>(current.step_x());
+      gp.step_y = static_cast<float>(current.step_y());
+      gp.step_yaw = static_cast<float>(current.step_yaw());
+      gp.fuse_alpha = kFuseAlpha;
+      if (cuda::AggregateCostsGpu(current.data(), T_curr, hist_inv_T,
+                                  hist_weights, hist_costs,
+                                  gp) == Status::kOk) {
+        return Status::kOk;
+      }
+    }
+  }
+#endif
 
   CostGrid aggregated(current);
   aggregated.Fill(0.f);
@@ -109,6 +175,9 @@ Status CostAggregator::Aggregate(CostGrid& current,
                         (1.f - kFuseAlpha) * aggregated.data()[i];
   }
 
+  // use_gpu is read only by the CUDA block above, so it is unused in a CPU-only
+  // build.
+  (void)use_gpu;
   return Status::kOk;
 }
 

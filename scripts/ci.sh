@@ -7,6 +7,7 @@
 #
 # Usage:
 #   ./scripts/ci.sh
+#   ./scripts/ci.sh --cuda-host   # type-check the GPU host paths, no nvcc needed
 #   ./scripts/ci.sh --debug       # -O0 -g instead of the default Release
 #   ./scripts/ci.sh --asan --ubsan
 #   ./scripts/ci.sh --tsan        # races in the CPU pose-grid fan-out
@@ -19,11 +20,15 @@ source "${ROOT}/scripts/lib.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: ci.sh [--debug|--release] [--asan] [--ubsan] [--tsan] [--no-style]
+Usage: ci.sh [--cuda-host] [--debug|--release] [--asan] [--ubsan] [--tsan]
+             [--no-style]
 
 Run the gates in order: format, configure, build, unit tests.
 
 Build options:
+  --cuda-host  Compile the CUDA host paths against the CPU stub. Needs neither
+               nvcc nor a GPU, and is what keeps the code inside
+               #ifdef CAMLOC_CUDA_ENABLED from drifting unnoticed.
   --debug      CMAKE_BUILD_TYPE=Debug. Note the default is Release: unoptimized
                Eigen makes the pose grid ~200x slower, so timings from a debug
                build say nothing about the algorithm.
@@ -54,6 +59,7 @@ build_type=""
 run_style=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --cuda-host) CMAKE_EXTRA+=(-DCAMLOC_CUDA_HOST_ONLY=ON); build_tags+=(cudahost) ;;
     --debug) build_type=Debug ;;
     --release) build_type=Release ;;
     --asan) sanitizers+=(address); build_tags+=(asan) ;;

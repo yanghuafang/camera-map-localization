@@ -7,7 +7,7 @@
 | GitHub repository | `camera-map-localization` |
 | CMake project | `camera_map_localization` |
 | C++ namespace / headers | `cam_loc` under `include/cam_loc/` |
-| Static libraries | `cam_loc_core` |
+| Static libraries | `cam_loc_core`, `cam_loc_cuda` |
 | CMake options | `CAMLOC_*` |
 
 The public repo name reflects **camera map localization**; internal `cam_loc` identifiers are kept for brevity and API stability.
@@ -110,7 +110,7 @@ By hand, naming the directory yourself:
 
 ```bash
 B=../camera-map-localization-build
-cmake -S . -B "$B" -DCAMLOC_BUILD_TESTS=ON
+cmake -S . -B "$B" -DCAMLOC_BUILD_CUDA=OFF -DCAMLOC_BUILD_TESTS=ON
 cmake --build "$B" -j"$(getconf _NPROCESSORS_ONLN)"
 ```
 
@@ -140,6 +140,7 @@ is where it is implemented.
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `CAMLOC_CUDA_HOST_ONLY` | `OFF` | Compile the CUDA **host** paths against the CPU stub — type-checks everything under `#ifdef CAMLOC_CUDA_ENABLED` without nvcc or a GPU |
 | `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
 | `CAMLOC_SANITIZER` | *(empty)* | `-fsanitize=` list, e.g. `address`, `undefined`, `address,undefined` |
 | `CAMLOC_WERROR` | `OFF` | Treat compiler warnings as errors |
@@ -207,11 +208,25 @@ code that includes them. GoogleTest comes prebuilt from the package manager and
 is not — which is fine, since the runtime still checks every instrumented
 translation unit and cam_loc's own code is what these are pointed at.
 
+### CUDA host paths
+
+Everything inside `#ifdef CAMLOC_CUDA_ENABLED` is invisible to a CPU-only build,
+so those call sites can drift out of sync with `cuda/distance_transform.h`
+without any CPU build noticing. `CAMLOC_CUDA_HOST_ONLY=ON` links the CPU stub but
+still defines the macro, so the compiler checks all of it on a machine with
+neither nvcc nor a GPU; at run time `IsAvailable()` returns false and every path
+falls back to the CPU, so tests behave exactly as CPU-only.
+
+```bash
+./scripts/ci.sh --cuda-host
+```
+
 ### Targets produced
 
 | Target | Type |
 |--------|------|
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
+| `cam_loc_cuda` | Static library — CPU stubs today, GPU kernels when they land |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
 | `run_sequence`, `eval_sequence`, `eval_perception_compare`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |

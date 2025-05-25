@@ -71,7 +71,9 @@ class CostGrid {
     float cost = 0.f;
   };
 
-  ArgMinResult Argmin() const;
+  /// @param use_gpu Try the CUDA reduction first; falls back to the CPU scan
+  ///        when CUDA is unavailable or the kernel fails.
+  ArgMinResult Argmin(bool use_gpu = false) const;
 
   /// Offset of the minimum, refined below the cell pitch.
   ///

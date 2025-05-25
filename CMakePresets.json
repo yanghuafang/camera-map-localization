@@ -33,6 +33,16 @@
       }
     },
     {
+      "name": "cuda-host",
+      "displayName": "CUDA host paths against the CPU stub (no nvcc)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-cudahost",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAMLOC_CUDA_HOST_ONLY": "ON"
+      }
+    },
+    {
       "name": "asan-ubsan",
       "displayName": "ASan + UBSan (RelWithDebInfo)",
       "inherits": "base",
@@ -51,6 +61,10 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "cuda-host",
+      "configurePreset": "cuda-host"
     },
     {
       "name": "asan-ubsan",
@@ -77,6 +91,11 @@
       "name": "debug",
       "inherits": "default",
       "configurePreset": "debug"
+    },
+    {
+      "name": "cuda-host",
+      "inherits": "default",
+      "configurePreset": "cuda-host"
     },
     {
       "name": "asan-ubsan",

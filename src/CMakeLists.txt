@@ -47,3 +47,10 @@ target_link_libraries(cam_loc_core
     Eigen3::Eigen
     nlohmann_json::nlohmann_json
 )
+
+add_subdirectory(cuda)
+
+target_link_libraries(cam_loc_core PUBLIC cam_loc_cuda)
+if(CAMLOC_HAS_CUDA)
+  target_compile_definitions(cam_loc_core PUBLIC CAMLOC_CUDA_ENABLED)
+endif()

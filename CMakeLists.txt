@@ -17,6 +17,15 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
 
 option(CAMLOC_BUILD_TESTS "Build unit tests" ON)
 
+# Type-check the GPU host paths without nvcc or a GPU. Everything inside
+# #ifdef CAMLOC_CUDA_ENABLED is invisible to a CPU-only build, so a rename can
+# leave those call sites behind while CI stays green. With this on, the stub is
+# linked but the macro is still defined, so those blocks are compiled and
+# checked; at run time IsAvailable() returns false and every path falls back to
+# the CPU, so the tests behave as they do CPU-only.
+option(CAMLOC_CUDA_HOST_ONLY
+  "Compile the CUDA host paths against the CPU stub (no nvcc needed)" OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

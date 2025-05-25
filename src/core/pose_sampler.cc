@@ -3,13 +3,18 @@
 
 #include "cam_loc/core/pose_sampler.h"
 
-#include <array>
-#include <cmath>
-#include <functional>
-
 #include "cam_loc/core/distance_transform_cpu.h"
 #include "cam_loc/core/frames.h"
 #include "cam_loc/core/parallel_for.h"
+
+#ifdef CAMLOC_CUDA_ENABLED
+#include "cam_loc/cuda/distance_transform.h"
+#endif
+
+#include <array>
+#include <cmath>
+#include <functional>
+#include <utility>
 
 namespace cam_loc::core {
 
@@ -17,10 +22,10 @@ namespace {
 
 uint8_t TypeToLabel(kitti::PolylineType type) {
   // DT label channel. A map point may only match perception of its own class,
-  // so every class that is detected has to have a channel of its own. Letting
-  // poles and signs share the unlabelled 0 with kUnknown would silently
-  // disable the class gate for exactly the two classes that constrain
-  // along-track position.
+  // so every class that is detected has to have a channel of its own -- poles
+  // and signs shared the unlabelled 0 with kUnknown until they were extracted,
+  // which silently disabled the class gate for exactly the two classes that
+  // constrain along-track position.
   switch (type) {
     case kitti::PolylineType::kLaneSolid:
       return 1;
@@ -182,6 +187,23 @@ Mat44 HypothesisPose(const Mat44& T_world_plane, double x_m, double y_m,
   return T_world_plane * Frames::OffsetToCam0Transform(x_m, y_m, yaw_rad);
 }
 
+#ifdef CAMLOC_CUDA_ENABLED
+// Flattens the map's polyline points into the flat xyz + label arrays the
+// kernels take. Only the GPU path needs it, and it is compiled only there: left
+// visible in a CPU-only build it is an unused function, which -Wall reports.
+void PackMapPoints(const kitti::MapChunk& map, std::vector<float>& xyz,
+                   std::vector<uint8_t>& labels) {
+  for (const auto& pl : map.polylines) {
+    for (const auto& p : pl.points) {
+      xyz.push_back(static_cast<float>(p.x()));
+      xyz.push_back(static_cast<float>(p.y()));
+      xyz.push_back(static_cast<float>(p.z()));
+      labels.push_back(TypeToLabel(pl.type));
+    }
+  }
+}
+#endif
+
 }  // namespace
 
 PoseSampler::PoseSampler(const LocalizationParams& params) : params_(params) {}
@@ -202,6 +224,12 @@ Status PoseSampler::BuildImageDt(const kitti::FramePerception& perception,
   std::vector<uint8_t> binary;
   RasterizePolylineList(perception.features, out.width, out.height, 2.f, binary,
                         out.labels);
+#ifdef CAMLOC_CUDA_ENABLED
+  if (params_.use_cuda && cuda::IsAvailable()) {
+    return cuda::ComputeDistanceTransformGpu(binary, out.width, out.height,
+                                             out.distance);
+  }
+#endif
   return DistanceTransformCpu::Compute(binary, out.width, out.height,
                                        out.distance);
 }
@@ -240,6 +268,12 @@ Status PoseSampler::BuildBevDtFromImagePerception(
   std::vector<uint8_t> binary;
   RasterizePolylineList(bev_polylines, out.width, out.height, 1.5f, binary,
                         out.labels);
+#ifdef CAMLOC_CUDA_ENABLED
+  if (params_.use_cuda && cuda::IsAvailable()) {
+    return cuda::ComputeDistanceTransformGpu(binary, out.width, out.height,
+                                             out.distance);
+  }
+#endif
   return DistanceTransformCpu::Compute(binary, out.width, out.height,
                                        out.distance);
 }
@@ -273,6 +307,44 @@ Status PoseSampler::ComputeImageCosts(const kitti::MapChunk& map,
                                       CostGrid& costs,
                                       const SearchWindow& window) const {
   if (projection_ == nullptr) return Status::kInvalidArgument;
+
+#ifdef CAMLOC_CUDA_ENABLED
+  if (params_.use_cuda && cuda::IsAvailable()) {
+    std::vector<float> map_xyz;
+    std::vector<uint8_t> map_labels;
+    PackMapPoints(map, map_xyz, map_labels);
+    if (!map_xyz.empty()) {
+      float T[16];
+      for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+          T[r * 4 + c] = static_cast<float>(T_world_plane(r, c));
+        }
+      }
+      cuda::PoseCostGpuParams gp;
+      gp.num_x = params_.grid.num_x;
+      gp.num_y = params_.grid.num_y;
+      gp.num_yaw = params_.grid.num_yaw;
+      gp.step_x_m = params_.grid.step_x_m;
+      gp.step_y_m = params_.grid.step_y_m;
+      gp.step_yaw_deg = params_.grid.step_yaw_deg;
+      gp.fx = projection_->fx();
+      gp.fy = projection_->fy();
+      gp.cx = projection_->cx();
+      gp.cy = projection_->cy();
+      gp.dt_max_cost = dt.max_cost;
+      gp.dt_width = dt.width;
+      gp.dt_height = dt.height;
+      std::vector<float> gpu_costs;
+      const int npts = static_cast<int>(map_labels.size());
+      if (cuda::ComputeImagePoseCostsGpu(
+              T, map_xyz.data(), npts, map_labels.data(), dt.distance.data(),
+              dt.labels.data(), gp, gpu_costs) == Status::kOk) {
+        costs.data() = gpu_costs;
+        return Status::kOk;
+      }
+    }
+  }
+#endif
 
   costs.Fill(dt.max_cost);
   const auto present = PresentChannels(map, /*ground_plane_only=*/false);
@@ -324,6 +396,46 @@ Status PoseSampler::ComputeBevCosts(const kitti::MapChunk& map,
                                     CostGrid& costs,
                                     const SearchWindow& window) const {
   if (projection_ == nullptr) return Status::kInvalidArgument;
+
+#ifdef CAMLOC_CUDA_ENABLED
+  if (params_.use_cuda && cuda::IsAvailable()) {
+    std::vector<float> map_xyz;
+    std::vector<uint8_t> map_labels;
+    PackMapPoints(map, map_xyz, map_labels);
+    if (!map_xyz.empty()) {
+      float T[16];
+      for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+          T[r * 4 + c] = static_cast<float>(T_world_plane(r, c));
+        }
+      }
+      cuda::PoseCostGpuParams gp;
+      gp.num_x = params_.grid.num_x;
+      gp.num_y = params_.grid.num_y;
+      gp.num_yaw = params_.grid.num_yaw;
+      gp.step_x_m = params_.grid.step_x_m;
+      gp.step_y_m = params_.grid.step_y_m;
+      gp.step_yaw_deg = params_.grid.step_yaw_deg;
+      gp.dt_max_cost = dt.max_cost;
+      gp.dt_width = dt.width;
+      gp.dt_height = dt.height;
+      gp.bev_x_min = static_cast<float>(BevConfig::kForwardMinM);
+      gp.bev_x_max = static_cast<float>(BevConfig::kForwardMaxM);
+      gp.bev_y_min = static_cast<float>(BevConfig::kLeftMinM);
+      gp.bev_y_max = static_cast<float>(BevConfig::kLeftMaxM);
+      gp.bev_mpp_x = static_cast<float>(BevConfig::MetersPerPixelX());
+      gp.bev_mpp_y = static_cast<float>(BevConfig::MetersPerPixelY());
+      std::vector<float> gpu_costs;
+      const int npts = static_cast<int>(map_labels.size());
+      if (cuda::ComputeBevPoseCostsGpu(
+              T, map_xyz.data(), npts, map_labels.data(), dt.distance.data(),
+              dt.labels.data(), gp, gpu_costs) == Status::kOk) {
+        costs.data() = gpu_costs;
+        return Status::kOk;
+      }
+    }
+  }
+#endif
 
   costs.Fill(dt.max_cost);
   const auto present = PresentChannels(map, /*ground_plane_only=*/true);

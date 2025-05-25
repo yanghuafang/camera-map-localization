@@ -2,14 +2,18 @@
 /// global update.
 #include "cam_loc/core/localization_engine.h"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-
 #include "cam_loc/core/cost_modes.h"
 #include "cam_loc/core/frames.h"
 #include "cam_loc/core/sampling_covariance.h"
 #include "cam_loc/map/map_loader.h"
+
+#ifdef CAMLOC_CUDA_ENABLED
+#include "cam_loc/cuda/distance_transform.h"
+#endif
+
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace cam_loc::core {
 
@@ -168,12 +172,16 @@ Status LocalizationEngine::RunMapMatching(
   }
 
   CostGrid aggregated = raw_costs;
+  bool use_gpu = params_.use_cuda;
+#ifdef CAMLOC_CUDA_ENABLED
+  use_gpu = use_gpu && cuda::IsAvailable();
+#endif
   // Temporal fusion: warp past cost volumes into the current sampling plane.
-  aggregator_.Aggregate(aggregated, T_plane, total_travel_m_);
+  aggregator_.Aggregate(aggregated, T_plane, total_travel_m_, use_gpu);
   aggregator_.PushHistory(raw_costs, T_plane, ego.global.frame,
                           total_travel_m_);
 
-  const auto argmin = aggregated.Argmin();
+  const auto argmin = aggregated.Argmin(use_gpu);
 
   // The winner sitting on the window's edge is the search saying the answer
   // may lie outside it. That is the one signal available online that the

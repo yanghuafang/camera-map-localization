@@ -55,10 +55,11 @@ class CostAggregator {
   ///                           are differences against the readings recorded by
   ///                           PushHistory, so both must come from the same
   ///                           odometer.
+  /// @param use_gpu            Try the CUDA path first, falling back to CPU.
   /// @return `kOk`. Leaves @p current untouched when no history carries weight,
   ///         rather than blending in an empty average.
   Status Aggregate(CostGrid& current, const Mat44& T_world_plane_curr,
-                   double travel_m);
+                   double travel_m, bool use_gpu = false);
 
   /// Retain a copy of @p costs, evicting the oldest past `window_size`.
   ///

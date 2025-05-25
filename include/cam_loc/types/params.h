@@ -187,6 +187,9 @@ struct LocalizationParams {
   /// Hypotheses are independent and each owns one cell, so the result does not
   /// depend on this: any thread count gives bitwise the same grid.
   int cost_threads = 0;
+
+  /// Use CUDA for pose-grid image cost evaluation when available.
+  bool use_cuda = false;
 };
 
 /// Published pose and map-matching diagnostics for one processed frame.

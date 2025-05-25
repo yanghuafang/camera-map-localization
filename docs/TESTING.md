@@ -59,6 +59,19 @@ over threads, and the claim that makes it safe -- hypotheses write disjoint
 cells, so nothing needs synchronizing -- is worth proving rather than asserting.
 It cannot be combined with `--asan`; the two replace the same allocator.
 
+## CUDA host paths without a GPU
+
+Code inside `#ifdef CAMLOC_CUDA_ENABLED` is not compiled by a CPU-only build, so
+a rename can leave it behind while every gate above stays green. This compiles
+it against the CPU stub, needing neither nvcc nor a GPU:
+
+```bash
+./scripts/ci.sh --cuda-host
+```
+
+It checks that the host side still compiles and links, not that any GPU result
+is right.
+
 ## Style gates
 
 Not a test, but `ci.sh` runs it and a red gate blocks a change just the same, so

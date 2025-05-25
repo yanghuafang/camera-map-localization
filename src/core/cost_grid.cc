@@ -3,6 +3,10 @@
 
 #include "cam_loc/core/cost_grid.h"
 
+#ifdef CAMLOC_CUDA_ENABLED
+#include "cam_loc/cuda/distance_transform.h"
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -189,9 +193,29 @@ Vec3 CostGrid::RefinedOffset(const ArgMinResult& argmin) const {
   return centre + delta;
 }
 
-CostGrid::ArgMinResult CostGrid::Argmin() const {
+CostGrid::ArgMinResult CostGrid::Argmin(bool use_gpu) const {
+  // Read only by the CUDA block below, so unused in a CPU-only build.
+  (void)use_gpu;
+
   ArgMinResult best;
   best.cost = std::numeric_limits<float>::max();
+
+#ifdef CAMLOC_CUDA_ENABLED
+  if (use_gpu && cuda::IsAvailable()) {
+    int idx = 0;
+    float vmin = 0.f;
+    if (cuda::ArgminGpu(costs_, idx, vmin) == Status::kOk) {
+      best.cost = vmin;
+      // Decode yaw-major linear index back to (ix, iy, iw)
+      const int dim_xy = DimX() * DimY();
+      best.iw = idx / dim_xy;
+      const int rem = idx % dim_xy;
+      best.iy = rem / DimX();
+      best.ix = rem % DimX();
+      return best;
+    }
+  }
+#endif
 
   for (int iw = 0; iw < DimW(); ++iw) {
     for (int iy = 0; iy < DimY(); ++iy) {

@@ -32,22 +32,22 @@ PointerAlignment: Left
 ReferenceAlignment: Pointer
 
 # Include order, exactly as the Google C++ Style Guide states it. Priority 0 is
-# clang-format's own slot for the related header -- foo.h for foo.cc -- so the
-# categories below start at 1:
+# clang-format's own slot for the related header -- cost_grid.h for
+# cost_grid.cc -- so the categories below start at 1:
 #
 #   0. the related header       (automatic)
 #   1. C system headers         <unistd.h>, <sys/stat.h>
 #   2. C++ standard library     <cstdint>, <string>
 #   3. other libraries          <Eigen/Dense>, <gtest/gtest.h>
-#   4. this project             "cam_loc/types/status.h"
+#   4. this project             "cam_loc/core/cost_grid.h"
 #
 # Slot 0 is reached only by a quoted include: isMainHeader() rejects anything
 # starting with `<`, so spelling this project's headers <cam_loc/...> would drop
 # the related header into group 4 and sort it alphabetically among its siblings.
 #
 # The C system headers are enumerated rather than matched as <name.h>, because
-# third-party headers such as <stb_image.h> are also <name.h>. Matching by
-# shape would need the third-party rule listed first to win -- clang-format takes the first
+# <cuda_runtime.h> and <stb_image.h> are also <name.h>. Matching by shape would
+# need the third-party rule listed first to win -- clang-format takes the first
 # matching regex -- which leaves the list ordered by specificity while the
 # priorities run in a different order. Enumerating makes the rules disjoint, so
 # list order and priority order agree and neither has to be read against the

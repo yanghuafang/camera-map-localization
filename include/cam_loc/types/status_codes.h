@@ -1,7 +1,7 @@
 #ifndef CAM_LOC_TYPES_STATUS_CODES_H_
 #define CAM_LOC_TYPES_STATUS_CODES_H_
 
-/// Lightweight result codes returned by I/O and map paths.
+/// Lightweight result codes returned by I/O, map, perception, and CUDA paths.
 
 namespace cam_loc {
 
@@ -10,6 +10,8 @@ enum class Status {
   kInvalidArgument,
   kIoError,
   kNotFound,
+  kNotImplemented,
+  kCudaError,
 };
 
 }  // namespace cam_loc
