@@ -8,8 +8,10 @@ Build and run everything:
 ./scripts/ci.sh
 ```
 
-`CMAKE_BUILD_TYPE` defaults to `Release` — see [BUILD.md](BUILD.md#build-type)
-for why that is not a detail.
+`CAMLOC_BUILD_CUDA` defaults on under Linux and off on macOS; add
+`-DCAMLOC_BUILD_CUDA=ON` explicitly if you want the GPU kernels on a machine
+where the default is off. `CMAKE_BUILD_TYPE` defaults to `Release` — see
+[BUILD.md](BUILD.md#build-type) for why that is not a detail.
 
 Builds land beside the repository, one directory per configuration
 (`../<repo>-build`, `../<repo>-build-asan-ubsan`, …); see
@@ -32,6 +34,7 @@ ctest --test-dir "$B" --output-on-failure
 | Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted; `OsmMapTest` — JSON, OSM XML and georef |
 | Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest` |
 | Eval | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest` |
+| CUDA parity | `CudaTest` (GPU vs CPU when CUDA available) |
 | End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
 | Filter | `LocalizationKfTest` — convergence away from identity attitude, and covariance well-formedness |
 | Core matching | `DistanceTransformTest`, `PoseSamplerTest` — including along-track recovery and sub-cell refinement; `CostGridTest`, `CostAggregatorTest` |
@@ -69,8 +72,12 @@ it against the CPU stub, needing neither nvcc nor a GPU:
 ./scripts/ci.sh --cuda-host
 ```
 
-It checks that the host side still compiles and links, not that any GPU result
-is right.
+CI has no job of its own for this: the `CUDA / nvcc` job compiles a strict superset of what
+`--cuda-host` compiles, so it already catches the same drift. This stays the fast local check,
+because it needs neither the toolkit nor a GPU. Neither is a substitute for running the
+kernels on real hardware — it checks that the host side still compiles and
+links, not that the GPU results are right; `CudaTest` covers that, and skips
+without a GPU.
 
 ## Style gates
 

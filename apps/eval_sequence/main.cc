@@ -33,6 +33,7 @@ struct Options {
   bool use_gt_prior = false;
   bool use_gt_plane = false;
   bool enable_bev = false;
+  bool use_cuda = false;
   int cost_threads = 0;
   bool adaptive_extent = false;
   bool use_global_ego = false;
@@ -129,6 +130,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
       opt.adaptive_extent = true;
     } else if (arg == "--cost-threads") {
       need_number("--cost-threads", cam_loc::apps::ParseInt, &opt.cost_threads);
+    } else if (arg == "--use-cuda") {
+      opt.use_cuda = true;
     } else if (arg == "--use-global-ego") {
       opt.use_global_ego = true;
     } else if (arg == "--map-error-m") {
@@ -263,6 +266,7 @@ int main(int argc, char** argv) {
     cfg.localization.use_gt_sampling_plane = opt.use_gt_plane;
     cfg.localization.enable_bev = opt.enable_bev;
     cfg.localization.use_global_ego_measurement = opt.use_global_ego;
+    cfg.localization.use_cuda = opt.use_cuda;
     cfg.localization.cost_threads = opt.cost_threads;
     cfg.localization.adaptive_extent.enabled = opt.adaptive_extent;
     cfg.localization.cost_softmax_scale = opt.cost_softmax_scale;

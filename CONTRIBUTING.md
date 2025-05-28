@@ -32,6 +32,12 @@ Sanitizers, and the GPU host paths without a GPU:
 ./scripts/ci.sh --cuda-host
 ```
 
+With CUDA locally:
+
+```bash
+./scripts/ci.sh --cuda
+```
+
 ## Pull requests
 
 1. **Branch** from `main`.
@@ -39,9 +45,10 @@ Sanitizers, and the GPU host paths without a GPU:
 3. **Tests** — Add or update GoogleTest coverage for new behavior.
 4. **Docs** — Update the relevant guide under `docs/` and `README.md` if user-facing behavior, CLI flags, or data layout changes.
 5. **Scripts** — If you add a helper script, document it in `scripts/README.md`.
-6. **CI** — PRs must pass three workflows: [`Lint`](.github/workflows/lint.yml) (`clang-format`),
-   [`Build`](.github/workflows/build.yml) (`Ubuntu`, `macOS`) and
-   [`Sanitizers`](.github/workflows/sanitizers.yml) (`Ubuntu / ASan + UBSan`, `macOS / ASan + UBSan`). Every configuration they
+6. **CI** — PRs must pass four workflows: [`Lint`](.github/workflows/lint.yml) (`clang-format`),
+   [`Build`](.github/workflows/build.yml) (`Ubuntu`, `macOS`),
+   [`Sanitizers`](.github/workflows/sanitizers.yml) (`Ubuntu / ASan + UBSan`, `macOS / ASan + UBSan`)
+   and [`CUDA`](.github/workflows/cuda.yml) (`nvcc`). Every configuration they
    build is a preset in `CMakePresets.json`, so any red job reproduces locally with the same
    commands — e.g. `cmake --preset cpu`, `cmake --build --preset cpu`, `ctest --preset cpu`.
 
@@ -75,7 +82,7 @@ This project follows the [Google C++ Style Guide](https://google.github.io/style
 - **Warnings:** the build is `-Wall -Wextra` and clean.
 - **Headers:** Public API under `include/cam_loc/`; implementation in `src/`.
 - **Project naming:** repository is **camera-map-localization**; CMake project `camera_map_localization`. Keep the `cam_loc` namespace and the library target names unless doing a deliberate API break.
-- **CUDA:** GPU code in `src/cuda/`; must have a CPU path or stub. A helper used only on the GPU path belongs inside `#ifdef CAMLOC_CUDA_ENABLED` — left outside it, a CPU-only build reports it as an unused function. The flip side is that no CPU-only build compiles what is *inside* those blocks, so a rename can leave them behind: run `./scripts/ci.sh --cuda-host` after any rename that touches `src/core/` or `include/cam_loc/cuda/`.
+- **CUDA:** GPU code in `src/cuda/`; must have CPU path or stub for CI (`CAMLOC_BUILD_CUDA=OFF`). A helper used only on the GPU path belongs inside `#ifdef CAMLOC_CUDA_ENABLED` — left outside it, a CPU-only build reports it as an unused function. The flip side is that no CPU-only build compiles what is *inside* those blocks, so a rename can leave them behind: run `./scripts/ci.sh --cuda-host` after any rename that touches `src/core/` or `include/cam_loc/cuda/`. CI catches the same drift in `CUDA / nvcc`, which compiles those blocks too — this is just the faster local check, needing no toolkit.
 - **Comments:** Explain **intent and trade-offs** — non-obvious algorithm steps, and why a thing is done the way it is. Do not narrate obvious code line by line.
 - **API docs:** Public headers use `///` comments whose first sentence is the brief. Add `@param` / `@return` where a parameter carries a **unit, a frame, or a constraint**, and leave them off where the signature already says it — `@param uv Pixel coordinates` is the narration the previous point rules out.
 - **Dependencies:** Prefer something Homebrew and apt both ship, and wire it into `CMakeLists.txt` and *both* `scripts/install_deps_*.sh`; a dependency only one platform can install is a dependency half the readers cannot build. Do not add heavy ones without discussion. Add a third-party include directory as `SYSTEM` so its warnings are not reported as ours.

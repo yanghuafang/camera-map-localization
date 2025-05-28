@@ -15,7 +15,7 @@ END=200
 NOISE_PX="${NOISE_PX:-4}"
 
 if [[ ! -x "${BUILD}/apps/eval_perception_compare/eval_perception_compare" ]]; then
-  cmake -S "${ROOT}" -B "${BUILD}" -DCAMLOC_BUILD_TESTS=ON
+  cmake -S "${ROOT}" -B "${BUILD}" -DCAMLOC_BUILD_CUDA=ON -DCAMLOC_BUILD_TESTS=ON
   cmake --build "${BUILD}" -j"$(camloc_nproc)" --target eval_perception_compare eval_sequence preprocess_kitti
 fi
 
@@ -47,6 +47,7 @@ echo "=== oracle vs real vs noisy (noise_px=${NOISE_PX}) ==="
   --skip-frames "${START}" \
   --max-frames $((END + 1)) \
   --noise-px "${NOISE_PX}" \
+  --use-cuda \
   --output-csv "${OUT}"
 
 echo ""
@@ -60,7 +61,7 @@ for PX in 0 2 4 8 12; do
     --max-frames $((END + 1)) \
     --perception-mode noisy \
     --noise-px "${PX}" \
-    2>&1 | awk '/Translation RMSE/{print $4}')
+    --use-cuda 2>&1 | awk '/Translation RMSE/{print $4}')
   echo "noise_px=${PX}  rmse_m=${SUM}"
 done
 

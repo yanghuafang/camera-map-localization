@@ -30,6 +30,7 @@ struct Options {
   int max_frames = -1;
   bool use_gt = false;
   bool use_gt_plane = false;
+  bool use_cuda = false;
 };
 
 Options ParseArgs(int argc, char** argv, bool* ok) {
@@ -81,6 +82,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
       opt.use_gt = true;
     } else if (arg == "--use-gt-plane") {
       opt.use_gt_plane = true;
+    } else if (arg == "--use-cuda") {
+      opt.use_cuda = true;
     } else if (arg == "--help" || arg == "-h") {
       std::cout
           << "Usage: run_sequence [options]\n"
@@ -97,7 +100,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
           << "  --sequence N            Sequence id (default 0)\n"
           << "  --max-frames N          Limit frames (-1 = all)\n"
           << "  --use-gt                Fuse GT pose (debug baseline)\n"
-          << "  --use-gt-plane          Pose grid at GT (oracle matching)\n";
+          << "  --use-gt-plane          Pose grid at GT (oracle matching)\n"
+          << "  --use-cuda              GPU pose-grid cost evaluation\n";
       std::exit(0);
     }
   }
@@ -155,6 +159,7 @@ int main(int argc, char** argv) {
     cam_loc::LocalizationParams params;
     params.use_gt_global_prior = opt.use_gt;
     params.use_gt_sampling_plane = opt.use_gt_plane;
+    params.use_cuda = opt.use_cuda;
     cam_loc::core::LocalizationEngine engine(params);
     engine.set_map_loader(map);
     engine.SetCalibration(calib);

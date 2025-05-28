@@ -17,8 +17,8 @@ ROS 2, which are large opt-ins with their own instructions.
 
 | Script | Purpose |
 |--------|---------|
-| `run_smoke.sh` | Prepare smoke data + run `run_sequence` |
-| `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
+| `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
+| `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
 
 Builds land **beside** the repository, one directory per configuration:
 `../<repo>-build`, `../<repo>-build-asan-ubsan`, and so on: the default

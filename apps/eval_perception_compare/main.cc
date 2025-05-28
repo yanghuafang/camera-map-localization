@@ -32,6 +32,7 @@ struct Options {
   int max_frames = 100;
   int skip_frames = 10;
   bool use_gt_plane = false;
+  bool use_cuda = false;
   double noise_px = 4.0;
   double noise_point_dropout = 0.05;
   double noise_polyline_dropout = 0.1;
@@ -89,6 +90,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
       need_number("--skip-frames", cam_loc::apps::ParseInt, &opt.skip_frames);
     } else if (arg == "--use-gt-plane") {
       opt.use_gt_plane = true;
+    } else if (arg == "--use-cuda") {
+      opt.use_cuda = true;
     } else if (arg == "--noise-px") {
       need_number("--noise-px", cam_loc::apps::ParseDouble, &opt.noise_px);
     } else if (arg == "--noise-point-dropout") {
@@ -114,7 +117,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
           << "  --noise-px N             Noisy pass pixel std (default 4)\n"
           << "  --noise-point-dropout P  Default 0.05\n"
           << "  --noise-polyline-dropout P Default 0.1\n"
-          << "  --output-csv PATH        Write per-frame comparison CSV\n";
+          << "  --output-csv PATH        Write per-frame comparison CSV\n"
+          << "  --use-cuda\n";
       std::exit(0);
     }
   }
@@ -149,6 +153,7 @@ cam_loc::kitti::SequenceEvalConfig BaseConfig(const Options& opt) {
   cfg.start_frame = opt.skip_frames;
   cfg.max_frames = opt.max_frames;
   cfg.noise_seed = opt.noise_seed;
+  cfg.localization.use_cuda = opt.use_cuda;
   return cfg;
 }
 

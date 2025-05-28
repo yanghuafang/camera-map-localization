@@ -15,14 +15,25 @@ endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
   Debug Release RelWithDebInfo MinSizeRel)
 
+# CUDA targets NVIDIA GPUs and is unavailable on macOS, so default the option off on
+# Apple platforms for a clean out-of-the-box configure. It stays on elsewhere (Linux),
+# where it still falls back to CPU stubs when nvcc is missing.
+if(APPLE)
+  set(CAMLOC_BUILD_CUDA_DEFAULT OFF)
+else()
+  set(CAMLOC_BUILD_CUDA_DEFAULT ON)
+endif()
+
+option(CAMLOC_BUILD_CUDA "Build CUDA kernels" ${CAMLOC_BUILD_CUDA_DEFAULT})
 option(CAMLOC_BUILD_TESTS "Build unit tests" ON)
 
 # Type-check the GPU host paths without nvcc or a GPU. Everything inside
 # #ifdef CAMLOC_CUDA_ENABLED is invisible to a CPU-only build, so a rename can
-# leave those call sites behind while CI stays green. With this on, the stub is
-# linked but the macro is still defined, so those blocks are compiled and
-# checked; at run time IsAvailable() returns false and every path falls back to
-# the CPU, so the tests behave as they do CPU-only.
+# leave those call sites behind while CI stays green -- which is exactly how
+# they drifted out of sync with cuda/distance_transform.h. With this on, the
+# stub is linked but the macro is still defined, so those blocks are compiled
+# and checked; at run time IsAvailable() returns false and every path falls back
+# to the CPU, so the tests and the smoke benchmark behave as they do CPU-only.
 option(CAMLOC_CUDA_HOST_ONLY
   "Compile the CUDA host paths against the CPU stub (no nvcc needed)" OFF)
 
@@ -44,7 +55,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Homebrew keeps versioned formulae keg-only: installed, but not linked into the
 # prefix CMake searches. eigen@3 is the one that matters -- the unversioned
 # `eigen` formula is 5.x, and Eigen's own version file declares 5.x incompatible
-# with a request for 3.4.
+# with a request for 3.4. scripts/lib.sh resolves the llvm keg the same way.
 if(APPLE)
   find_program(CAMLOC_BREW brew)
   if(CAMLOC_BREW)
@@ -115,6 +126,9 @@ endif()
 # Position matters: add_compile_options() applies to targets created after it,
 # so these flags reach cam_loc's own code below and nothing else -- the
 # dependencies arrive as imported targets carrying their own interface flags.
+# distance_transform_kernels.cu is compiled by an explicit nvcc command rather
+# than by this target, so src/cuda/CMakeLists.txt passes the same two flags
+# through -Xcompiler itself.
 add_compile_options(-Wall -Wextra)
 
 # Opt-in and not gated in CI: the tree is clean under -Werror here, but -Wall

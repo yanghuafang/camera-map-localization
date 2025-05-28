@@ -21,6 +21,7 @@ add_executable(cam_loc_tests
   perception_eval_test.cc
   semantic_kitti_test.cc
   semantic_lidar_test.cc
+  cuda_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)

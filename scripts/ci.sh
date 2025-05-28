@@ -7,6 +7,7 @@
 #
 # Usage:
 #   ./scripts/ci.sh
+#   ./scripts/ci.sh --cuda        # CUDA build; CI has no GPU and always uses CPU
 #   ./scripts/ci.sh --cuda-host   # type-check the GPU host paths, no nvcc needed
 #   ./scripts/ci.sh --debug       # -O0 -g instead of the default Release
 #   ./scripts/ci.sh --asan --ubsan
@@ -20,12 +21,14 @@ source "${ROOT}/scripts/lib.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: ci.sh [--cuda-host] [--debug|--release] [--asan] [--ubsan] [--tsan]
-             [--no-style]
+Usage: ci.sh [--cuda] [--cuda-host] [--debug|--release] [--asan] [--ubsan]
+             [--tsan] [--no-style]
 
 Run the gates in order: format, configure, build, unit tests.
 
 Build options:
+  --cuda       Enable the CUDA build (falls back to CPU stubs if nvcc missing).
+               CI has no GPU, so the workflow always builds CPU-only.
   --cuda-host  Compile the CUDA host paths against the CPU stub. Needs neither
                nvcc nor a GPU, and is what keeps the code inside
                #ifdef CAMLOC_CUDA_ENABLED from drifting unnoticed.
@@ -56,9 +59,11 @@ CMAKE_EXTRA=()
 sanitizers=()
 build_tags=()
 build_type=""
+cuda_flag=""
 run_style=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --cuda) cuda_flag=-DCAMLOC_BUILD_CUDA=ON ;;
     --cuda-host) CMAKE_EXTRA+=(-DCAMLOC_CUDA_HOST_ONLY=ON); build_tags+=(cudahost) ;;
     --debug) build_type=Debug ;;
     --release) build_type=Release ;;
@@ -71,6 +76,8 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+CMAKE_EXTRA+=("${cuda_flag:--DCAMLOC_BUILD_CUDA=OFF}")
 
 # One -fsanitize= list: the flag has to carry every sanitizer at once, because a
 # second -fsanitize= does not add to the first.

@@ -19,12 +19,13 @@ The public repo name reflects **camera map localization**; internal `cam_loc` id
 | Operating system | Linux or macOS (Intel or Apple Silicon) |
 | CMake | ≥ 3.18 |
 | C++ compiler | C++17 (GCC 9+, Clang 10+, or Apple Clang 12+) |
+| CUDA toolkit (optional, Linux only) | ≥ 11.0, `nvcc` on `PATH` |
 | Git | Required (to clone this repository; on macOS also for `stb`, which has no formula) |
 
 ### Platform notes
 
-- **Linux** is the primary target.
-- **macOS** builds with the stock Apple Clang toolchain (`xcode-select --install`).
+- **Linux** is the primary target and the only platform with GPU support; `CAMLOC_BUILD_CUDA` defaults **on** (falling back to CPU stubs when `nvcc` is missing).
+- **macOS** builds with the stock Apple Clang toolchain (`xcode-select --install`). CUDA is unavailable on macOS, so `CAMLOC_BUILD_CUDA` defaults **off** and the CPU code path is used throughout — everything except the optional GPU kernels behaves identically to Linux.
 - The `scripts/*.sh` helpers detect the CPU count portably (`nproc` on Linux, `getconf`/`sysctl` on macOS), so they run unchanged on both platforms.
 
 Optional:
@@ -96,6 +97,8 @@ machines:
 -- GoogleTest 1.18.0
 ```
 
+CUDA builds additionally compile `src/cuda/*.cu` into `libcam_loc_cuda.a`.
+
 ## Configure and build
 
 `$(getconf _NPROCESSORS_ONLN)` reports the core count on both Linux and macOS (substitute `$(nproc)` on Linux if you prefer).
@@ -103,7 +106,8 @@ machines:
 The script picks the build directory for you, which is the usual way in:
 
 ```bash
-./scripts/ci.sh            # configure, build, test
+./scripts/ci.sh --no-style          # configure, build, test
+./scripts/ci.sh --cuda --no-style   # with the GPU kernels (Linux)
 ```
 
 By hand, naming the directory yourself:
@@ -140,6 +144,7 @@ is where it is implemented.
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `CAMLOC_BUILD_CUDA` | `ON` (Linux) / `OFF` (macOS) | Build GPU kernels; falls back to CPU stubs if CUDA unavailable |
 | `CAMLOC_CUDA_HOST_ONLY` | `OFF` | Compile the CUDA **host** paths against the CPU stub — type-checks everything under `#ifdef CAMLOC_CUDA_ENABLED` without nvcc or a GPU |
 | `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
 | `CAMLOC_SANITIZER` | *(empty)* | `-fsanitize=` list, e.g. `address`, `undefined`, `address,undefined` |
@@ -147,7 +152,11 @@ is where it is implemented.
 
 The tree builds warning-free under `-Wall -Wextra`, which is always on for
 cam_loc's own targets (the dependencies arrive as imported targets and keep
-their own settings). `CAMLOC_WERROR` is off by default and not enabled in CI:
+their own settings). That includes `distance_transform_kernels.cu`, which
+`add_custom_command` hands to `nvcc` rather than to a CMake target, so
+`src/cuda/CMakeLists.txt` forwards the two flags itself with
+`-Xcompiler=-Wall,-Wextra`. It is the one file no CI job can warn about, since
+GitHub's runners have no `nvcc`. `CAMLOC_WERROR` is off by default and not enabled in CI:
 `-Wall` means something different to each compiler in the matrix, so gating on
 it would turn a compiler upgrade into a red build on unrelated pull requests.
 Turn it on locally when you want the enforcement:
@@ -226,7 +235,7 @@ falls back to the CPU, so tests behave exactly as CPU-only.
 | Target | Type |
 |--------|------|
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
-| `cam_loc_cuda` | Static library — CPU stubs today, GPU kernels when they land |
+| `cam_loc_cuda` | Static library — GPU kernels (or CPU stubs) |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
 | `run_sequence`, `eval_sequence`, `eval_perception_compare`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
@@ -239,7 +248,9 @@ cmake --build build --target eval_sequence
 
 ## Troubleshooting
 
+- **CUDA not found:** set `-DCAMLOC_BUILD_CUDA=OFF` or install `nvcc` and ensure it is on `PATH`.
 - **`Missing dependencies:` at configure time:** run `./scripts/install_deps_macos.sh` or `./scripts/install_deps_ubuntu.sh`. The message lists each missing library with its Homebrew and apt package name.
+- **Linker errors with CUDA static libs:** build apps through the provided CMake targets (they link `cam_loc_core` + `cam_loc_cuda` in the correct order).
 - **CMake from another directory:** always pass the source tree explicitly, e.g. `cmake -S . -B <dir>` (all `scripts/*.sh` do this).
 
 ## Continuous integration
@@ -255,6 +266,7 @@ matrix leg has to be added there before it gates anything.
 | | `macOS` | the same, under Apple Clang |
 | [`Sanitizers`](../.github/workflows/sanitizers.yml) | `Ubuntu / ASan + UBSan` | `asan-ubsan` preset, then `ctest`. LeakSanitizer rides along here |
 | | `macOS / ASan + UBSan` | the same without LSan, which macOS/arm64 does not support |
+| [`CUDA`](../.github/workflows/cuda.yml) | `nvcc` | real `nvcc` compile of `src/cuda/`, then `ctest`. No hosted runner has a device, so the CUDA paths take the CPU fallback |
 
 `Lint` is its own file because its findings do not depend on the host and the job needs no
 compile, so a formatting slip reports in under a minute rather than behind a build. The tool

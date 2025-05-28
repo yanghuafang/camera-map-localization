@@ -27,7 +27,7 @@ if [[ ! -d "${KITTI}/dataset/sequences/${SEQ}/labels" ]]; then
 fi
 
 if [[ ! -x "${BUILD}/apps/preprocess_kitti/preprocess_kitti" ]]; then
-  cmake -S "${ROOT}" -B "${BUILD}" -DCAMLOC_BUILD_TESTS=ON
+  cmake -S "${ROOT}" -B "${BUILD}" -DCAMLOC_BUILD_CUDA=ON -DCAMLOC_BUILD_TESTS=ON
   cmake --build "${BUILD}" -j"$(camloc_nproc)"
 fi
 
@@ -48,4 +48,5 @@ echo "=== eval with real perception ==="
   --sequence "${SEQ}" \
   --max-frames $((END + 1)) \
   --skip-frames "${START}" \
+  --use-cuda \
   --output-csv "${DATA}/eval_seq${SEQ}_perception.csv"
