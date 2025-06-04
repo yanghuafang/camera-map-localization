@@ -19,6 +19,7 @@ ROS 2, which are large opt-ins with their own instructions.
 |--------|---------|
 | `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
 | `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
+| `remote_ubuntu.sh` | Run any of these on the Ubuntu host, optionally syncing the tree first |
 
 Builds land **beside** the repository, one directory per configuration:
 `../<repo>-build`, `../<repo>-build-asan-ubsan`, and so on: the default
@@ -27,6 +28,24 @@ tree so `git status` never has to look past build output, one per
 configuration so an instrumented binary is never the one you benchmark; see
 [BUILD.md](../docs/BUILD.md#build-directories). `CAMLOC_BUILD_DIR` overrides
 the scheme.
+
+`remote_ubuntu.sh` exists for one reason: CUDA has no macOS toolchain, so the
+GPU kernels can be compiled and tested only on Linux.
+
+```bash
+./scripts/remote_ubuntu.sh --sync ./scripts/ci.sh --cuda
+```
+
+The remote command runs in the directory matching the local one, so the same
+thing from inside `scripts/` uses the paths you would type here:
+
+```bash
+./remote_ubuntu.sh --sync
+./remote_ubuntu.sh ./run_smoke.sh
+```
+
+Anchoring at the repository root instead would make one command line mean two
+different things depending on which side you typed it.
 
 ## Style gates
 

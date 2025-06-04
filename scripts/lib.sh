@@ -26,7 +26,7 @@ camloc_nproc() {
 # Out of tree, so `git status` never has to look past build output and deleting a
 # configuration is an rm -rf on something that is not the working tree. Kept
 # beside the repository rather than in a shared scratch directory so that a tree
-# copied to another host leaves its build behind.
+# copied to another host (see remote_ubuntu.sh) leaves its build behind.
 #
 # One directory per configuration, so switching between build types is not a
 # full rebuild each time.

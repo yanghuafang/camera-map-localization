@@ -91,3 +91,14 @@ it belongs in the same pass:
 
 It needs `clang-format` (`brew install llvm` on macOS, since Xcode ships it not;
 `sudo apt install clang-format` on Ubuntu).
+
+## Recommended pre-push checklist
+
+```bash
+./scripts/ci.sh
+./scripts/ci.sh --cuda-host --no-style   # if you touched anything under #ifdef CAMLOC_CUDA_ENABLED
+./scripts/ci.sh --asan --ubsan --no-style
+
+# On a machine with a GPU — nothing on macOS can check this:
+./scripts/remote_ubuntu.sh --sync ./scripts/ci.sh --cuda
+```
