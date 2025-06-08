@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# ci.sh — configure, build and run the unit tests.
+# ci.sh — local mirror of the GitHub Actions gates.
 #
-# One script, so that "does this still work" is one command with no arguments
-# and the gates run in a fixed order -- format first because it is cheapest and
-# needs no build, so the first failure is the one you read.
+# Same gates in the same order: format (cheapest, no build), configure, build,
+# unit tests, smoke benchmark. Actions splits these across lint.yml and
+# build.yml to parallelize; here they are sequential so the first failure is
+# the one you read.
+#
+# The flags map onto CMakePresets.json, which is what the workflows configure
+# with -- so `cmake --preset asan-ubsan` and `./scripts/ci.sh --asan --ubsan`
+# build the same thing in the same directory.
 #
 # Usage:
 #   ./scripts/ci.sh
@@ -18,13 +23,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/lib.sh
 source "${ROOT}/scripts/lib.sh"
+DATA="$(camloc_data_dir "${ROOT}")"
 
 usage() {
   cat <<'USAGE'
 Usage: ci.sh [--cuda] [--cuda-host] [--debug|--release] [--asan] [--ubsan]
              [--tsan] [--no-style]
 
-Run the gates in order: format, configure, build, unit tests.
+Run the same checks as GitHub Actions: format, build, unit tests, smoke
+benchmark.
 
 Build options:
   --cuda       Enable the CUDA build (falls back to CPU stubs if nvcc missing).
@@ -122,6 +129,13 @@ fi
 cmake -S "${ROOT}" -B "${BUILD}" ${CMAKE_EXTRA[@]+"${CMAKE_EXTRA[@]}"} -DCAMLOC_BUILD_TESTS=ON
 cmake --build "${BUILD}" -j"$(camloc_nproc)"
 
+"${ROOT}/scripts/prepare_smoke_kitti.sh"
+
 ctest --test-dir "${BUILD}" --output-on-failure
+
+"${BUILD}/apps/benchmark/benchmark" \
+  --data-root "${DATA}" \
+  --filter smoke_oracle_cpu \
+  --output-json "${DATA}/benchmark_ci.json"
 
 echo "CI checks passed."

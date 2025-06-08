@@ -21,12 +21,16 @@ add_executable(cam_loc_tests
   perception_eval_test.cc
   semantic_kitti_test.cc
   semantic_lidar_test.cc
+  benchmark_test.cc
   cuda_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)
-# TEST_DATA_DIR is the committed fixtures in tests/data.
+# TEST_DATA_DIR is the committed fixtures in tests/data. CAMLOC_DATA_DIR is the
+# generated and downloaded datasets, which live outside the repository -- a test
+# that needs them skips when they are absent.
 target_compile_definitions(cam_loc_tests PRIVATE
-  TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+  CAMLOC_DATA_DIR="${CAMLOC_DATA_DIR}")
 
 gtest_discover_tests(cam_loc_tests)

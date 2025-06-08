@@ -19,6 +19,7 @@ ROS 2, which are large opt-ins with their own instructions.
 |--------|---------|
 | `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
 | `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
+| `run_benchmark.sh` | Smoke regression suite; optional kitti00 if poses downloaded |
 | `remote_ubuntu.sh` | Run any of these on the Ubuntu host, optionally syncing the tree first |
 
 Builds land **beside** the repository, one directory per configuration:

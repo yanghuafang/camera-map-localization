@@ -12,7 +12,7 @@ cd camera-map-localization
 ./scripts/ci.sh
 ```
 
-`ci.sh` is the gate set: format, build, tests. Builds land beside the
+`ci.sh` is the whole gate set: format, build, tests, smoke benchmark. Builds land beside the
 repository, one directory per configuration — see
 [docs/BUILD.md](docs/BUILD.md#build-directories).
 
@@ -36,13 +36,14 @@ With CUDA locally:
 
 ```bash
 ./scripts/ci.sh --cuda
+./scripts/run_benchmark.sh
 ```
 
 ## Pull requests
 
 1. **Branch** from `main`.
 2. **Scope** — Keep changes focused. Separate unrelated fixes into different PRs when possible.
-3. **Tests** — Add or update GoogleTest coverage for new behavior.
+3. **Tests** — Add or update GoogleTest coverage for new behavior. Regression thresholds are defined per-case in `src/benchmark/benchmark_runner.cc`; update only when intentionally changing algorithm behavior.
 4. **Docs** — Update the relevant guide under `docs/` and `README.md` if user-facing behavior, CLI flags, or data layout changes.
 5. **Scripts** — If you add a helper script, document it in `scripts/README.md`.
 6. **CI** — PRs must pass four workflows: [`Lint`](.github/workflows/lint.yml) (`clang-format`),
@@ -64,9 +65,9 @@ Use the body to say **why**, not what — the diff already says what. Wrap it at
 
 - What was wrong before, in terms a reader can check against the code.
 - Why this shape and not the obvious alternative.
-- What moved as a consequence — a threshold, a doc claim that stopped being true.
+- What moved as a consequence — a threshold, a benchmark number, a doc claim that stopped being true.
 
-Keep unrelated changes out of the same commit.
+Keep unrelated changes out of the same commit, and do not commit generated benchmark JSON or downloaded data alongside a code change.
 
 ## Code guidelines
 
@@ -87,8 +88,16 @@ This project follows the [Google C++ Style Guide](https://google.github.io/style
 - **API docs:** Public headers use `///` comments whose first sentence is the brief. Add `@param` / `@return` where a parameter carries a **unit, a frame, or a constraint**, and leave them off where the signature already says it — `@param uv Pixel coordinates` is the narration the previous point rules out.
 - **Dependencies:** Prefer something Homebrew and apt both ship, and wire it into `CMakeLists.txt` and *both* `scripts/install_deps_*.sh`; a dependency only one platform can install is a dependency half the readers cannot build. Do not add heavy ones without discussion. Add a third-party include directory as `SYSTEM` so its warnings are not reported as ours.
 
+## Algorithm changes
+
+When touching localization core (`localization_engine`, `localization_kf`, `pose_sampler`, `cost_aggregator`, CUDA kernels):
+
+1. Run full unit tests and `./scripts/run_benchmark.sh` (or at least `--filter smoke`).
+2. Note behavior changes in the PR description (RMSE, match rate, latency).
+
 ## What not to commit
 
+- Downloaded KITTI archives, generated perception, benchmark JSON outputs (see `.gitignore`).
 - IDE/agent configs (`.cursor/`, `AGENTS.md`).
 - Proprietary automotive SDK source, headers, or copied test data.
 - Large binary datasets; document download steps instead.
@@ -99,8 +108,8 @@ Include:
 
 - OS, compiler, CMake/CUDA versions
 - Exact configure/build commands
-- Minimal repro
-- Relevant log output
+- Minimal repro (prefer `<repo>-data/smoke_kitti` + `./scripts/run_smoke.sh`)
+- Relevant log output or `eval_sequence` CSV snippet
 
 ## License
 

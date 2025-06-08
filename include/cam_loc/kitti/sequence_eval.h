@@ -3,7 +3,7 @@
 
 /// Sequence evaluation types and summary aggregation.
 ///
-/// Consumed by eval_sequence and eval_perception_compare.
+/// Consumed by eval_sequence, eval_perception_compare, and the benchmark suite.
 
 #include <string>
 #include <vector>
@@ -67,7 +67,7 @@ struct SequenceEvalSummary {
   double p95_frame_ms = 0.0;
 };
 
-/// CLI inputs for RunSequenceEval.
+/// CLI / benchmark inputs for RunSequenceEval.
 struct SequenceEvalConfig {
   std::string kitti_root = ".";
   std::string perception_root;

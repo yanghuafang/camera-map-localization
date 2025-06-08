@@ -43,6 +43,15 @@ compile_commands.json
 *.exe
 *.out
 
+# ── CUDA ─────────────────────────────────────────────────────────────────────
+# Only emitted by a manual `nvcc --keep`; a normal build keeps these in build/.
+*.cubin
+*.fatbin
+*.gpu
+*.i
+*.ii
+*.ptx
+
 # ── Debug info ───────────────────────────────────────────────────────────────
 *.dSYM/
 *.dwo
@@ -53,6 +62,17 @@ compile_commands.json
 # `core` is anchored: an unanchored rule would ignore a src/core/ directory.
 /core
 core.[0-9]*
+
+# ── Profiling output ─────────────────────────────────────────────────────────
+# Nsight Systems/Compute and perf write next to the binary being profiled, which
+# for apps/benchmark and the CUDA kernels means inside the tree.
+*.ncu-rep
+*.nsys-rep
+*.qdrep
+*.qdstrm
+*.sqlite
+perf.data
+perf.data.old
 
 # ── Test and tool output ─────────────────────────────────────────────────────
 Testing/
@@ -96,3 +116,11 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.lnk
+
+# ── Project: datasets ────────────────────────────────────────────────────────
+# Datasets and evaluation output live in ../<repo>-data, outside the tree
+# entirely -- see scripts/lib.sh camloc_data_dir. This rule only catches an app
+# run by hand from the repository root, since a couple of them default an
+# --output-dir to a relative data/ path. Root-anchored, so a src/.../data/
+# directory would not be swept up with it.
+/data/

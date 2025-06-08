@@ -137,8 +137,34 @@ that deleting a configuration is `rm -rf` on something that is not the working
 tree. One per configuration so switching between build types is not a full
 rebuild.
 
-`CAMLOC_BUILD_DIR` overrides the scheme. `scripts/lib.sh` (`camloc_build_dir`)
-is where it is implemented.
+`CAMLOC_BUILD_DIR` overrides the scheme; CI uses it to keep its build inside the
+workspace where the artifact upload can find it.
+
+### Dataset directory
+
+Datasets go beside the repository too, in `../camera-map-localization-data/`:
+
+```
+camera-map-localization-data/
+  smoke_kitti/        ./scripts/prepare_smoke_kitti.sh   (generated)
+  kitti_odometry/     ./scripts/download_kitti_odometry.sh
+  perception/         preprocess_kitti output
+  map/                optional world-frame map override
+  *.json, *.csv       benchmark and eval output
+```
+
+The build directories are out of tree because build output is not source. The
+datasets are out of tree for that reason and a blunter one: KITTI's velodyne
+archive alone is about 80 GB, and a directory that size inside a working tree
+makes every `git status`, every editor index and every `rsync` pay for it.
+Nothing there is ours to version — it is downloaded or regenerated — so the
+repository is better off with nowhere to put it.
+
+`CAMLOC_DATA_DIR` overrides the scheme. CI sets it to a path inside the
+workspace, because `actions/upload-artifact` cannot reach outside. `scripts/lib.sh`
+(`camloc_data_dir`) and `CMakeLists.txt` compute the same default independently —
+the scripts pass it to the apps as `--data-root`, and CMake passes it to the
+tests, one of which skips when the smoke sequence is absent.
 
 ### CMake options
 
@@ -224,7 +250,7 @@ so those call sites can drift out of sync with `cuda/distance_transform.h`
 without any CPU build noticing. `CAMLOC_CUDA_HOST_ONLY=ON` links the CPU stub but
 still defines the macro, so the compiler checks all of it on a machine with
 neither nvcc nor a GPU; at run time `IsAvailable()` returns false and every path
-falls back to the CPU, so tests behave exactly as CPU-only.
+falls back to the CPU, so tests and benchmarks behave exactly as CPU-only.
 
 ```bash
 ./scripts/ci.sh --cuda-host
@@ -237,7 +263,7 @@ falls back to the CPU, so tests behave exactly as CPU-only.
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
 | `cam_loc_cuda` | Static library — GPU kernels (or CPU stubs) |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
-| `run_sequence`, `eval_sequence`, `eval_perception_compare`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
+| `run_sequence`, `eval_sequence`, `eval_perception_compare`, `benchmark`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
 
 Build a single app:
@@ -262,7 +288,7 @@ matrix leg has to be added there before it gates anything.
 | Workflow | Check | What it runs |
 |----------|-------|--------------|
 | [`Lint`](../.github/workflows/lint.yml) | `clang-format` | `scripts/format.sh --check`, pinned to `clang-format-18` |
-| [`Build`](../.github/workflows/build.yml) | `Ubuntu` | `cpu` preset: build and `ctest` |
+| [`Build`](../.github/workflows/build.yml) | `Ubuntu` | `cpu` preset: build, `ctest`, `smoke_oracle_cpu` benchmark |
 | | `macOS` | the same, under Apple Clang |
 | [`Sanitizers`](../.github/workflows/sanitizers.yml) | `Ubuntu / ASan + UBSan` | `asan-ubsan` preset, then `ctest`. LeakSanitizer rides along here |
 | | `macOS / ASan + UBSan` | the same without LSan, which macOS/arm64 does not support |

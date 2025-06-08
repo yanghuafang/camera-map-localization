@@ -33,11 +33,29 @@ ctest --test-dir "$B" --output-on-failure
 | Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
 | Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted; `OsmMapTest` — JSON, OSM XML and georef |
 | Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest` |
-| Eval | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest` |
+| Eval / benchmark | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest`, `BenchmarkTest` |
 | CUDA parity | `CudaTest` (GPU vs CPU when CUDA available) |
 | End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
 | Filter | `LocalizationKfTest` — convergence away from identity attitude, and covariance well-formedness |
 | Core matching | `DistanceTransformTest`, `PoseSamplerTest` — including along-track recovery and sub-cell refinement; `CostGridTest`, `CostAggregatorTest` |
+
+Smoke benchmark test (`BenchmarkTest.SmokeOracleCpuPasses`) requires prepared smoke data; it skips if `<repo>-data/smoke_kitti` is missing.
+
+## Smoke integration (no KITTI download)
+
+```bash
+./scripts/prepare_smoke_kitti.sh 120
+./scripts/run_smoke.sh
+```
+
+## Regression benchmark (CI-friendly)
+
+```bash
+./scripts/ci.sh              # same checks as GitHub Actions (CPU)
+./scripts/run_benchmark.sh   # full smoke suite (+ kitti00 if data present)
+```
+
+See [BENCHMARK.md](BENCHMARK.md) for case list and thresholds.
 
 ## Sanitizers
 

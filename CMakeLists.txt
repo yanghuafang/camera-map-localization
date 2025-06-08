@@ -117,9 +117,17 @@ endif()
 # build that behaves differently on two hosts starts here.
 message(STATUS "Eigen ${Eigen3_VERSION}, nlohmann/json ${nlohmann_json_VERSION}, "
                "stb ${CAMLOC_STB_INCLUDE_DIR}")
+# Datasets -- downloaded KITTI, generated smoke sequences, perception JSON --
+# live beside the repository, the same way build directories do, because they
+# are large, regenerable, and not ours to version. This mirrors camloc_data_dir
+# in scripts/lib.sh; keep the two in step.
+get_filename_component(camloc_parent "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
+get_filename_component(camloc_name "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+set(CAMLOC_DATA_DIR "${camloc_parent}/${camloc_name}-data" CACHE PATH
+    "Directory holding the datasets (smoke_kitti/, kitti_odometry/, perception/)")
 
 if(CAMLOC_BUILD_TESTS)
-  message(STATUS "GoogleTest ${GTest_VERSION}")
+  message(STATUS "GoogleTest ${GTest_VERSION}, data ${CAMLOC_DATA_DIR}")
   enable_testing()
 endif()
 
