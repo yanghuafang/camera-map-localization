@@ -1,4 +1,5 @@
-/// CLI: run the regression benchmark suite; optional JSON report.
+/// CLI: run regression benchmark suite or micro-benchmarks; optional JSON
+/// report.
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -9,7 +10,9 @@
 #include <nlohmann/json.hpp>
 
 #include "cam_loc/benchmark/benchmark.h"
+#include "cam_loc/benchmark/micro_benchmarks.h"
 #include "cam_loc/cuda/distance_transform.h"
+#include "cam_loc/kitti/calib_parser.h"
 
 namespace {
 
@@ -21,6 +24,7 @@ struct Options {
   std::string suite = "default";
   std::string filter;
   std::string output_json;
+  bool micro = false;
   bool list = false;
   bool fail_on_regression = true;
 };
@@ -46,6 +50,8 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
       opt.filter = need("--filter");
     } else if (arg == "--output-json") {
       opt.output_json = need("--output-json");
+    } else if (arg == "--micro") {
+      opt.micro = true;
     } else if (arg == "--list") {
       opt.list = true;
     } else if (arg == "--no-fail") {
@@ -59,6 +65,7 @@ Options ParseArgs(int argc, char** argv, bool* ok) {
                 << "  --suite NAME         default (smoke + kitti00 cases)\n"
                 << "  --filter PREFIX      Run only cases matching prefix\n"
                 << "  --output-json PATH   Write machine-readable results\n"
+                << "  --micro              Run DT/pose-grid micro-benchmarks\n"
                 << "  --list               List case names and exit\n"
                 << "  --no-fail            Always exit 0 (report only)\n";
       std::exit(0);
@@ -88,8 +95,10 @@ void PrintCaseResult(const cam_loc::benchmark::BenchmarkResult& r) {
   }
 }
 
-void WriteJson(const cam_loc::benchmark::BenchmarkSuiteResult& suite,
-               const std::string& path) {
+void WriteJson(
+    const cam_loc::benchmark::BenchmarkSuiteResult& suite,
+    const std::vector<cam_loc::benchmark::MicroBenchmarkResult>& micro,
+    const std::string& path) {
   nlohmann::json root;
   root["passed"] = suite.passed;
   root["failed"] = suite.failed;
@@ -120,6 +129,18 @@ void WriteJson(const cam_loc::benchmark::BenchmarkSuiteResult& suite,
     cases.push_back(c);
   }
   root["cases"] = cases;
+
+  if (!micro.empty()) {
+    nlohmann::json mj = nlohmann::json::array();
+    for (const auto& m : micro) {
+      mj.push_back({{"name", m.name},
+                    {"use_cuda", m.use_cuda},
+                    {"mean_ms", m.mean_ms},
+                    {"p95_ms", m.p95_ms},
+                    {"iterations", m.iterations}});
+    }
+    root["micro"] = mj;
+  }
 
   std::ofstream out(path);
   out << root.dump(2) << "\n";
@@ -155,6 +176,31 @@ int main(int argc, char** argv) {
       return 0;
     }
 
+    if (opt.micro) {
+      cam_loc::kitti::Calibration calib;
+      const std::string calib_path =
+          cam_loc::kitti::ResolveCalibPath(opt.data_root + "/smoke_kitti", 0);
+      if (cam_loc::kitti::ParseCalibrationFile(calib_path, calib) !=
+          cam_loc::Status::kOk) {
+        std::cerr << "Micro-benchmark requires data/smoke_kitti (run "
+                     "prepare_smoke_kitti.sh)\n";
+        return 1;
+      }
+      const auto micro = cam_loc::benchmark::RunMicroBenchmarks(calib, 30);
+      std::cout << "Micro-benchmarks (smoke calib, 30 iters):\n";
+      for (const auto& m : micro) {
+        std::cout << std::fixed << std::setprecision(3) << "  " << m.name
+                  << (m.use_cuda ? " [cuda]" : " [cpu]")
+                  << " mean=" << m.mean_ms << "ms p95=" << m.p95_ms << "ms\n";
+      }
+      if (!opt.output_json.empty()) {
+        cam_loc::benchmark::BenchmarkSuiteResult empty;
+        WriteJson(empty, micro, opt.output_json);
+        std::cout << "Wrote " << opt.output_json << "\n";
+      }
+      return 0;
+    }
+
     cam_loc::benchmark::BenchmarkSuiteResult suite;
     cam_loc::benchmark::RunBenchmarkSuite(cases, suite);
 
@@ -168,7 +214,7 @@ int main(int argc, char** argv) {
     }
 
     if (!opt.output_json.empty()) {
-      WriteJson(suite, opt.output_json);
+      WriteJson(suite, {}, opt.output_json);
       std::cout << "\nWrote " << opt.output_json << "\n";
     }
 

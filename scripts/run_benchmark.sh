@@ -23,6 +23,12 @@ echo "=== camera-map-localization benchmark suite ==="
   --filter smoke \
   --output-json "${OUT}"
 
+echo ""
+echo "=== micro-benchmarks (DT + pose grid) ==="
+"${BUILD}/apps/benchmark/benchmark" \
+  --data-root "${DATA}" \
+  --micro
+
 if [[ -f "${DATA}/kitti_odometry/poses/00.txt" ]]; then
   echo ""
   echo "=== kitti00 subset (if data present) ==="

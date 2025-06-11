@@ -52,7 +52,7 @@ Smoke benchmark test (`BenchmarkTest.SmokeOracleCpuPasses`) requires prepared sm
 
 ```bash
 ./scripts/ci.sh              # same checks as GitHub Actions (CPU)
-./scripts/run_benchmark.sh   # full smoke suite (+ kitti00 if data present)
+./scripts/run_benchmark.sh   # full smoke + micro-benchmarks (+ kitti00 if data present)
 ```
 
 See [BENCHMARK.md](BENCHMARK.md) for case list and thresholds.
