@@ -35,6 +35,7 @@ ctest --test-dir "$B" --output-on-failure
 | Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest` |
 | Eval / benchmark | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest`, `BenchmarkTest` |
 | CUDA parity | `CudaTest` (GPU vs CPU when CUDA available) |
+| Visualization | `VizTest` |
 | End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
 | Filter | `LocalizationKfTest` — convergence away from identity attitude, and covariance well-formedness |
 | Core matching | `DistanceTransformTest`, `PoseSamplerTest` — including along-track recovery and sub-cell refinement; `CostGridTest`, `CostAggregatorTest` |

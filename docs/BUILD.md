@@ -178,7 +178,8 @@ tests, one of which skips when the smoke sequence is absent.
 
 The tree builds warning-free under `-Wall -Wextra`, which is always on for
 cam_loc's own targets (the dependencies arrive as imported targets and keep
-their own settings). That includes `distance_transform_kernels.cu`, which
+their own settings, and `stb` is included as a system directory so its warnings
+are not reported as ours). That includes `distance_transform_kernels.cu`, which
 `add_custom_command` hands to `nvcc` rather than to a CMake target, so
 `src/cuda/CMakeLists.txt` forwards the two flags itself with
 `-Xcompiler=-Wall,-Wextra`. It is the one file no CI job can warn about, since
@@ -263,7 +264,7 @@ falls back to the CPU, so tests and benchmarks behave exactly as CPU-only.
 | `cam_loc_core` | Static library — localization engine, map, perception, KITTI I/O |
 | `cam_loc_cuda` | Static library — GPU kernels (or CPU stubs) |
 | `cam_loc_app_common` | INTERFACE target — header-only helpers shared by the CLI front-ends |
-| `run_sequence`, `eval_sequence`, `eval_perception_compare`, `benchmark`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
+| `run_sequence`, `eval_sequence`, `eval_perception_compare`, `benchmark`, `viz_frame`, `preprocess_kitti` | CLI executables under `<build dir>/apps/` |
 | `cam_loc_tests` | GoogleTest binary under `<build dir>/tests/` |
 
 Build a single app:

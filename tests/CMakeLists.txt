@@ -23,6 +23,7 @@ add_executable(cam_loc_tests
   semantic_lidar_test.cc
   benchmark_test.cc
   cuda_test.cc
+  viz_test.cc
 )
 
 target_link_libraries(cam_loc_tests PRIVATE cam_loc_core GTest::gtest_main)
