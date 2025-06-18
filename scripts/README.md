@@ -20,6 +20,7 @@ ROS 2, which are large opt-ins with their own instructions.
 | `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
 | `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
 | `run_benchmark.sh` | Smoke regression + micro-benchmarks; optional kitti00 if poses downloaded |
+| `build_ros.sh` | Build optional `cam_loc_ros` package; installs ROS 2 first if it is missing (`--install-ros` to skip the prompt) |
 | `remote_ubuntu.sh` | Run any of these on the Ubuntu host, optionally syncing the tree first |
 
 Builds land **beside** the repository, one directory per configuration:
@@ -85,5 +86,6 @@ clang-tool resolver, the source-file list) that the scripts above source.
 | Script | Purpose |
 |--------|---------|
 | `run_viz_smoke.sh` | Offline PNG panel for smoke frame 20 |
+| `run_ros_viz.sh` | Launch ROS 2 RViz node on smoke data |
 
-See [docs/VISUALIZATION.md](../docs/VISUALIZATION.md) for manual `viz_frame` usage.
+See [docs/VISUALIZATION.md](../docs/VISUALIZATION.md) for manual `viz_frame` / `ros2 launch` usage.

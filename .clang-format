@@ -2,8 +2,8 @@
 #
 # scripts/format.sh names the roots it formats, so nothing under a build
 # directory is ever reformatted. A subtree that must follow another project's
-# conventions can carry its own .clang-format: clang-format uses the nearest one
-# above each file.
+# conventions (ament/ROS 2, Qt) can carry its own .clang-format: clang-format
+# uses the nearest one above each file.
 
 BasedOnStyle: Google
 IndentWidth: 2

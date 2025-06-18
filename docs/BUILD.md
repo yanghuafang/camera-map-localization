@@ -30,6 +30,7 @@ The public repo name reflects **camera map localization**; internal `cam_loc` id
 
 Optional:
 
+- **ROS 2** (Humble or Jazzy) — only for `ros/cam_loc_ros` RViz playback; see [VISUALIZATION.md](VISUALIZATION.md)
 - **curl / unzip** — for `scripts/download_*.sh` (preinstalled on macOS)
 
 ### Installing them
@@ -272,6 +273,17 @@ Build a single app:
 ```bash
 cmake --build build --target eval_sequence
 ```
+
+## ROS 2 package (optional)
+
+ROS is **not** part of the main CMake tree. After building `cam_loc_core`:
+
+```bash
+./scripts/build_ros.sh
+source ../camera-map-localization-build-ros/ws/install/setup.bash
+```
+
+Requires ROS 2 Humble or Jazzy with `rclcpp`, `rviz2`, `visualization_msgs`, `nav_msgs`, `sensor_msgs`. `build_ros.sh` installs it when it is missing, asking first: from `packages.ros.org` into `/opt/ros` on Ubuntu, or from [RoboStack](https://robostack.github.io) into `../<repo>-ros` on macOS, since Homebrew carries no ROS formula and ROS 2's own macOS support is a Tier 3 source build. The core library, apps, and tests build and run without any of it.
 
 ## Troubleshooting
 

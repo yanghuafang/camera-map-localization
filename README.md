@@ -49,7 +49,7 @@ Gate on ambiguity and fit → EKF update
 - [KITTI_RUN.md](docs/KITTI_RUN.md) — smoke test, download, running a sequence
 - [TESTING.md](docs/TESTING.md) — unit tests, sanitizers, style gates
 - [BENCHMARK.md](docs/BENCHMARK.md) — regression suite, thresholds, measured numbers
-- [VISUALIZATION.md](docs/VISUALIZATION.md) — offline PNG debug views
+- [VISUALIZATION.md](docs/VISUALIZATION.md) — offline PNG debug views and ROS 2 RViz playback
 - [CONTRIBUTING.md](CONTRIBUTING.md) — style, commit convention, review gates
 
 ## License

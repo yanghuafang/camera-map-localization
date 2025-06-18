@@ -55,7 +55,8 @@ class Projection {
   /// @return `kInvalidArgument` when the point falls outside the BEV window.
   static Status RigToBevPixel(const Vec3& p_rig, int& out_col, int& out_row);
 
-  // --- Compound world/image/BEV transforms ---
+  // --- Compound world/image/BEV transforms (shared by synthesis, offline viz,
+  // ROS markers) ---
 
   /// Transform a world point into the rig frame of @p T_world_rig (Rᵀ·(p − t)).
   static Vec3 WorldToRig(const Mat44& T_world_rig, const Vec3& p_world);

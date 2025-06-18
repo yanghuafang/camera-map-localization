@@ -78,6 +78,28 @@ camloc_data_dir() {
   echo "${dir}"
 }
 
+# ROS 2 directory, as a sibling of the repository.
+#
+#   camloc_ros_dir "${ROOT}"   -> ../camera-map-localization-build-ros
+#
+# Holds the distribution in env/ and the colcon workspace in ws/. Named with
+# the same -build-<tag> scheme as camloc_build_dir, and out of the tree for the
+# same reasons -- doubly so here, where the RoboStack prefix on macOS is close
+# to 4 GB and colcon regenerates ws/ from scratch whenever it is deleted.
+#
+# Not camloc_build_dir "$1" ros, because that honours CAMLOC_BUILD_DIR and
+# would then return the C++ build directory instead.
+camloc_ros_dir() {
+  local root="$1"
+  if [[ -n "${CAMLOC_ROS_DIR:-}" ]]; then
+    echo "${CAMLOC_ROS_DIR}"
+    return
+  fi
+  local name
+  name="$(basename "${root}")"
+  echo "$(cd "${root}/.." && pwd)/${name}-build-ros"
+}
+
 # Resolve a clang tool (clang-format) and echo its path.
 #
 # Order: CAMLOC_CLANG_FORMAT override, the Homebrew llvm keg, then PATH. The keg
@@ -139,19 +161,19 @@ camloc_resolve_clang_tool() {
 # theirs to follow.
 #
 # The prune covers the other direction. A dependency that is *vendored* into the
-# tree -- a Qt or OpenSSL subtree under src/ -- would otherwise sit inside a
-# named root and be reformatted to Google style on the next ./format.sh.
-# Directories with these conventional names are skipped, so vendored code keeps
-# whatever style its upstream uses.
+# tree -- an upstream ROS package copied under ros/, a Qt or OpenSSL subtree
+# under src/ -- would otherwise sit inside a named root and be reformatted to
+# Google style on the next ./format.sh. Directories with these conventional
+# names are skipped, so vendored code keeps whatever style its upstream uses.
 #
 # A subtree that must follow another project's conventions but does not sit
-# under one of these names can instead carry its own .clang-format: the tool
-# reads the nearest config above each file.
+# under one of these names can instead carry its own .clang-format and
+# .clang-tidy: both tools read the nearest config above each file.
 camloc_source_files() {
   local root="$1"
-  find "${root}/src" "${root}/include" "${root}/apps" "${root}/tests" \
+  find "${root}/src" "${root}/include" "${root}/apps" "${root}/tests" "${root}/ros" \
     \( -type d \( -name third_party -o -name third-party -o -name thirdparty \
                   -o -name vendor -o -name external -o -name _deps \) -prune \) \
-    -o \( -type f \( -name '*.cc' -o -name '*.h' \) -print \) \
+    -o \( -type f \( -name '*.cc' -o -name '*.h' -o -name '*.cu' \) -print \) \
     | sort
 }

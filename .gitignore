@@ -92,6 +92,12 @@ Testing/
 # ── Package managers ─────────────────────────────────────────────────────────
 vcpkg_installed/
 
+# ── Python (ROS 2 launch files, colcon) ──────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+venv/
+
 # ── Merge and patch artifacts ────────────────────────────────────────────────
 *.orig
 *.rej
@@ -124,3 +130,9 @@ $RECYCLE.BIN/
 # --output-dir to a relative data/ path. Root-anchored, so a src/.../data/
 # directory would not be swept up with it.
 /data/
+
+# ── Project: ROS 2 workspace ─────────────────────────────────────────────────
+# build_ros.sh puts the colcon workspace beside the repository, in
+# ../<repo>-build-ros/ws, so nothing here catches it. This rule only catches a
+# colcon run started by hand from inside ros/.
+ros/ws/

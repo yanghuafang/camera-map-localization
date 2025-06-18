@@ -55,7 +55,7 @@ With CUDA locally:
 
 ## Commit messages
 
-Write them as **Conventional Commits** — `type(scope): description`, lowercase, imperative, no trailing period. The types in use are `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build` and `ci`; the scope is the subsystem the change lands in (`core`, `map`, `perception`, `kitti`, `scripts`). For example:
+Write them as **Conventional Commits** — `type(scope): description`, lowercase, imperative, no trailing period. The types in use are `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build` and `ci`; the scope is the subsystem the change lands in (`core`, `map`, `perception`, `cuda`, `viz`, `kitti`, `scripts`, `ros`). For example:
 
 ```
 feat(core): search the pose grid on vehicle axes
