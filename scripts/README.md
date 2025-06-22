@@ -6,8 +6,8 @@ All scripts assume repository root as working directory (they resolve paths rela
 
 | Script | Purpose |
 |--------|---------|
-| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 nlohmann-json googletest llvm`, plus an Xcode Command Line Tools check. `--groups build,style,data` installs a subset; CI takes only what each job uses |
-| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev libstb-dev clang-format curl unzip`. `--groups build,style,data` installs a subset; CI takes only what each job uses |
+| `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 nlohmann-json googletest llvm`, plus an Xcode Command Line Tools check. `--groups build,style` installs a subset; CI takes only what each job uses |
+| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev libstb-dev clang-format clang-tidy curl unzip`. `--groups build,style,data` installs a subset; CI takes only what each job uses |
 
 Both take `--dry-run`. Between them they install everything the build links
 against, so the configure itself needs no network. Neither installs CUDA or
@@ -17,7 +17,7 @@ ROS 2, which are large opt-ins with their own instructions.
 
 | Script | Purpose |
 |--------|---------|
-| `ci.sh` | Format, configure, build and run the unit tests. Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
+| `ci.sh` | Local mirror of GitHub Actions (format + CPU build + ctest + smoke benchmark + tidy). Flags select the build under test: `--cuda`, `--cuda-host`, `--debug`/`--release`, `--asan`, `--ubsan`, `--no-style` |
 | `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
 | `run_benchmark.sh` | Smoke regression + micro-benchmarks; optional kitti00 if poses downloaded |
 | `build_ros.sh` | Build optional `cam_loc_ros` package; installs ROS 2 first if it is missing (`--install-ros` to skip the prompt) |
@@ -53,14 +53,21 @@ different things depending on which side you typed it.
 
 | Script | Purpose |
 |--------|---------|
-| `format.sh` | `clang-format` over `src/`, `include/` and `tests/`, plus a trailing-whitespace strip that also covers the scripts, docs and CMakeLists; `--check` reports without writing |
+| `format.sh` | `clang-format` over `src/`, `include/`, `apps/`, `tests/`, `ros/`, plus a trailing-whitespace strip that also covers the scripts, docs and CMakeLists; `--check` reports without writing |
+| `tidy.sh` | `clang-tidy` against the curated list in [`.clang-tidy`](../.clang-tidy); `--fix` applies what it can and re-formats |
 
-It is run by `ci.sh` and by CI:
+Both are run by `ci.sh` and by CI:
 
 ```bash
-brew install llvm              # macOS — Xcode ships it not
-sudo apt install clang-format  # Ubuntu
+brew install llvm                          # macOS — Xcode ships neither tool
+sudo apt install clang-format clang-tidy   # Ubuntu
 ```
+
+`tidy.sh` needs a compile database, so configure once first (`cmake -S . -B build
+-DCAMLOC_BUILD_TESTS=ON`). It takes its file list from that database rather than
+from a directory walk, which is why it analyzes the CUDA host wrapper only in a
+CUDA build and never tries to analyze `ros/` — see the header comment in the
+script for what goes wrong otherwise.
 
 `lib.sh` is not run directly: it holds the shared helpers (`camloc_nproc`, the
 clang-tool resolver, the source-file list) that the scripts above source.

@@ -78,6 +78,57 @@ camloc_data_dir() {
   echo "${dir}"
 }
 
+# Echo a --gcc-install-dir= flag pinning clang to a usable libstdc++, or
+# nothing when the default already works.
+#
+# On Linux, clang takes libstdc++ from the highest-numbered directory under
+# /usr/lib/gcc, whether or not that GCC's headers are installed. Ubuntu 26.04
+# leaves gcc 16's CRT objects there while shipping only gcc 15's headers, so
+# clang selects a toolchain with no <cmath> and no libstdc++.so. Every
+# clang-based tool then fails at once, and the error names a standard header
+# rather than the real cause: clang-tidy reports "'cmath' file not found" on
+# every file in the tree. g++ is unaffected, so the ordinary build keeps passing
+# and only the clang tools break.
+#
+# Probed rather than assumed: the flag is emitted only when the default cannot
+# compile and link, so a machine where clang is set up correctly gets nothing.
+# Nothing on macOS either, where clang uses its own libc++.
+camloc_clang_gcc_flag() {
+  [[ "$(uname -s)" == Linux ]] || return 0
+  local cxx="${1:-clang++}"
+  command -v "${cxx}" >/dev/null 2>&1 || return 0
+
+  local probe
+  probe="$(mktemp -d)"
+  printf '#include <cmath>\nint main() { return (int)std::sqrt(0.0); }\n' \
+    >"${probe}/probe.cc"
+  if "${cxx}" "${probe}/probe.cc" -o "${probe}/probe" >/dev/null 2>&1; then
+    rm -rf "${probe}"
+    return 0
+  fi
+
+  # Newest GCC that actually ships C++ headers -- /usr/include/c++/<n> is the
+  # thing that is missing, so it is the thing to look for.
+  local dir version best=""
+  for dir in /usr/include/c++/*/; do
+    version="$(basename "${dir}")"
+    [[ "${version}" =~ ^[0-9]+$ ]] || continue
+    if [[ -z "${best}" || "${version}" -gt "${best}" ]]; then best="${version}"; fi
+  done
+
+  local candidate
+  for candidate in /usr/lib/gcc/*/"${best}"; do
+    [[ -n "${best}" && -d "${candidate}" ]] || continue
+    if "${cxx}" "--gcc-install-dir=${candidate}" "${probe}/probe.cc" \
+         -o "${probe}/probe" >/dev/null 2>&1; then
+      rm -rf "${probe}"
+      echo "--gcc-install-dir=${candidate}"
+      return 0
+    fi
+  done
+  rm -rf "${probe}"
+}
+
 # ROS 2 directory, as a sibling of the repository.
 #
 #   camloc_ros_dir "${ROOT}"   -> ../camera-map-localization-build-ros

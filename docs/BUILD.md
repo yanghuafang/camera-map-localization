@@ -301,20 +301,21 @@ matrix leg has to be added there before it gates anything.
 | Workflow | Check | What it runs |
 |----------|-------|--------------|
 | [`Lint`](../.github/workflows/lint.yml) | `clang-format` | `scripts/format.sh --check`, pinned to `clang-format-18` |
+| | `clang-tidy` | configure only, then `scripts/tidy.sh`, pinned to `clang-tidy-18` |
 | [`Build`](../.github/workflows/build.yml) | `Ubuntu` | `cpu` preset: build, `ctest`, `smoke_oracle_cpu` benchmark |
 | | `macOS` | the same, under Apple Clang |
 | [`Sanitizers`](../.github/workflows/sanitizers.yml) | `Ubuntu / ASan + UBSan` | `asan-ubsan` preset, then `ctest`. LeakSanitizer rides along here |
 | | `macOS / ASan + UBSan` | the same without LSan, which macOS/arm64 does not support |
 | [`CUDA`](../.github/workflows/cuda.yml) | `nvcc` | real `nvcc` compile of `src/cuda/`, then `ctest`. No hosted runner has a device, so the CUDA paths take the CPU fallback |
 
-`Lint` is its own file because its findings do not depend on the host and the job needs no
-compile, so a formatting slip reports in under a minute rather than behind a build. The tool
-is installed by version: the unversioned package follows the runner image, and an unpinned
+`Lint` is its own file because its findings do not depend on the host and neither job needs a
+compile, so a formatting slip reports in under a minute rather than behind a build. Both tools
+are installed by version: the unversioned package follows the runner image, and an unpinned
 formatter eventually has CI and an editor disagree about a file nobody edited. The runner
 images are pinned for the same reason.
 
 Each job installs only what it uses: `scripts/install_deps_ubuntu.sh --groups build` for the
-builds, and a version-pinned `clang-format-18` for the style job. The install scripts remain
+builds, and a version-pinned `clang-format-18` / `clang-tidy-18` for the two style jobs. The install scripts remain
 the only package list in the project.
 
 The two sanitizer legs are not equivalent. LeakSanitizer rides along with ASan on Linux and is

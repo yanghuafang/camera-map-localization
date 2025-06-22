@@ -100,16 +100,40 @@ without a GPU.
 
 ## Style gates
 
-Not a test, but `ci.sh` runs it and a red gate blocks a change just the same, so
-it belongs in the same pass:
+Not tests, but CI runs them and a red gate blocks a PR just the same, so they
+belong in the same pass:
 
 ```bash
 ./scripts/format.sh          # clang-format + trailing-whitespace strip
-./scripts/format.sh --check  # what the gate runs: reports and exits 1, writes nothing
+./scripts/format.sh --check  # what CI runs: reports and exits 1, writes nothing
+./scripts/tidy.sh            # clang-tidy against the curated .clang-tidy list
+./scripts/tidy.sh --fix      # apply what clang-tidy can fix, then re-format
 ```
 
-It needs `clang-format` (`brew install llvm` on macOS, since Xcode ships it not;
-`sudo apt install clang-format` on Ubuntu).
+Both need `clang-format` / `clang-tidy` (`brew install llvm` on macOS, since
+Xcode ships neither; `sudo apt install clang-format clang-tidy` on Ubuntu).
+`tidy.sh` additionally needs a compile database, so configure once first.
+
+`tidy.sh` is also what enforces the Google naming rules: `.clang-tidy` runs
+`readability-identifier-naming` configured to the guide, so a `lowerCamelCase`
+function or a `CamelCase` parameter fails the gate rather than surviving review.
+The two exemptions it carries — variable-like accessors, and matrix notation
+such as `T_world_rig` — are written out with their reasons in that file.
+
+`tidy.sh` analyzes the entries in the build directory's `compile_commands.json`
+that fall under `src/`, `apps/` or `tests/` — both halves of that matter.
+
+Taking the list from the database, rather than walking the source tree, is what
+keeps the two build configurations honest: in a CPU-only build the database
+holds `distance_transform_stub.cc` and not `distance_transform_gpu.cc`, and
+handing clang-tidy a file it has no command for makes it invent one — reporting
+a missing `cuda_runtime.h` and a cascade of parse errors that say nothing about
+the code. `ros/cam_loc_ros` is outside the database for the same reason (colcon
+builds it separately) and is not analyzed.
+
+Bounding it to `src/`, `apps/` and `tests/` is the other half: it keeps the list
+to code this repository is responsible for, whatever else a build directory
+happens to compile.
 
 ## Recommended pre-push checklist
 

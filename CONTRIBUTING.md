@@ -12,18 +12,18 @@ cd camera-map-localization
 ./scripts/ci.sh
 ```
 
-`ci.sh` is the whole gate set: format, build, tests, smoke benchmark. Builds land beside the
+`ci.sh` is the whole gate set: format, build, tests, smoke benchmark, clang-tidy. Builds land beside the
 repository, one directory per configuration — see
 [docs/BUILD.md](docs/BUILD.md#build-directories).
 
-The style gate needs `clang-format`:
+The two style gates need `clang-format` and `clang-tidy`:
 
 ```bash
-brew install llvm              # macOS — Xcode ships it not
-sudo apt install clang-format  # Ubuntu
+brew install llvm              # macOS — Xcode ships neither tool
+sudo apt install clang-format clang-tidy   # Ubuntu
 ```
 
-Without it, `./scripts/ci.sh --no-style` runs the build and tests alone.
+Without them, `./scripts/ci.sh --no-style` runs the build and tests alone.
 
 Sanitizers, and the GPU host paths without a GPU:
 
@@ -71,16 +71,17 @@ Keep unrelated changes out of the same commit, and do not commit generated bench
 
 ## Code guidelines
 
-This project follows the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). Most of it is enforced rather than described — `./scripts/format.sh` is the authority. What follows is the part that needs saying anyway.
+This project follows the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). Most of it is enforced rather than described — `./scripts/format.sh` and `./scripts/tidy.sh` are the authority, and CI runs both. What follows is the part that needs saying anyway.
 
 - **Language:** C++17, no extensions.
-- **Formatting:** `clang-format` using the repo's [`.clang-format`](.clang-format) — Google base style, 2-space indent, 80-column limit. Run `./scripts/format.sh` before committing; `--check` is what the gate runs.
+- **Formatting:** `clang-format` using the repo's [`.clang-format`](.clang-format) — Google base style, 2-space indent, 80-column limit. Run `./scripts/format.sh` before committing; `--check` is what CI runs.
 - **Files:** sources are `.cc`, headers `.h`, both `lower_case`. A test for `foo.cc` is `foo_test.cc`.
 - **Header guards:** `#define` guards, not `#pragma once`, named for the include path — `include/cam_loc/types/status.h` guards with `CAM_LOC_TYPES_STATUS_H_`.
-- **Naming:** types and functions `UpperCamelCase`; variables, parameters and members `lower_case`, with a trailing underscore on private members; constants and enumerators `kUpperCamelCase`; namespaces `lower_case`. Two exemptions are deliberate: a trivial accessor may be named for the member it returns (`step_x()`), and a matrix or transform may use geometry notation (`T_world_rig`, `K`, `R0_rect`) rather than being renamed into something that reads as a translation.
+- **Naming:** types and functions `UpperCamelCase`; variables, parameters and members `lower_case`, with a trailing underscore on private members; constants and enumerators `kUpperCamelCase`; namespaces `lower_case`. Two exemptions are configured in [`.clang-tidy`](.clang-tidy) and explained there: a trivial accessor may be named for the member it returns (`step_x()`, `set_debug_capture()`), and a matrix or transform may use geometry notation (`T_world_rig`, `K`, `R0_rect`) rather than being renamed into something that reads as a translation. `readability-identifier-naming` enforces the rest.
 - **Includes:** project headers are quoted and spelled as a path from an include root — `#include "cam_loc/types/status.h"`. Order is the guide's: related header, C system, C++ standard library, other libraries, this project. `.clang-format` regroups automatically, so writing them in any order and running `format.sh` is enough.
 - **Exceptions:** not used. Errors travel as `cam_loc::Status` in the library and as a `bool` out-parameter in CLI argument parsing; `apps/common/arg_parse.h` has non-throwing numeric parsing for that. Each `main()` keeps one top-level `catch` as a backstop against a library that throws anyway — that is the single deliberate exception to the rule, and the reason is that the alternative is `std::terminate` with no diagnostic.
-- **Warnings:** the build is `-Wall -Wextra` and clean.
+- **Static analysis:** `./scripts/tidy.sh` runs `clang-tidy` against the curated list in [`.clang-tidy`](.clang-tidy). That list is deliberately not the full upstream set: this is grid-index arithmetic and Eigen expressions, and several upstream families read that shape as a defect. Each disabled family carries the reason it was disabled — if a check would help, re-argue it there rather than silencing findings case by case.
+- **Warnings:** the build is `-Wall -Wextra` and clean. `-DCAMLOC_WERROR=ON` makes them errors; it is off by default and not gated in CI, since `-Wall` differs between compilers and releases. Run it locally on your change.
 - **Headers:** Public API under `include/cam_loc/`; implementation in `src/`.
 - **Project naming:** repository is **camera-map-localization**; CMake project `camera_map_localization`. Keep the `cam_loc` namespace and the library target names unless doing a deliberate API break.
 - **CUDA:** GPU code in `src/cuda/`; must have CPU path or stub for CI (`CAMLOC_BUILD_CUDA=OFF`). A helper used only on the GPU path belongs inside `#ifdef CAMLOC_CUDA_ENABLED` — left outside it, a CPU-only build reports it as an unused function. The flip side is that no CPU-only build compiles what is *inside* those blocks, so a rename can leave them behind: run `./scripts/ci.sh --cuda-host` after any rename that touches `src/core/` or `include/cam_loc/cuda/`. CI catches the same drift in `CUDA / nvcc`, which compiles those blocks too — this is just the faster local check, needing no toolkit.

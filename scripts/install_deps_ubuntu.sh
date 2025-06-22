@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 # install_deps_ubuntu.sh — install the build environment on Ubuntu via apt.
 #
-# Installs everything the build needs, including the C++ libraries, so the
-# configure needs no network at all -- which is the difference between a working
-# machine and a confusing CMake failure when the route to github.com is blocked
-# or slow.
+# Installs everything the build needs, including the C++ libraries. Ubuntu
+# packages all four, so the configure needs no network at all -- which is the
+# difference between a working machine and a confusing CMake failure when the
+# route to github.com is blocked or slow.
 #
-# Unlike the macOS side, clang-format comes from the distro and lands on PATH,
-# so lib.sh finds it without a keg prefix. Its version follows the release; the
-# tree formats identically under 18 through 22, and .clang-format restates the
-# one Google default that changed across that range.
+# Unlike the macOS side, clang-format and clang-tidy come from the distro and
+# land on PATH, so lib.sh finds them without a keg prefix. Their version follows
+# the release; the tree formats identically under 18 through 22, and
+# .clang-format restates the one Google default that changed across that range.
 #
 # Not installed here, and why:
-#   CUDA   — a large, driver-coupled install with its own NVIDIA instructions.
-#   ROS 2  — a large opt-in with its own vendor instructions.
+#   CUDA   — a large, driver-coupled install with its own NVIDIA instructions,
+#            and every build works without it via the CPU stub. See
+#            docs/BUILD.md.
+#   ROS 2  — a large opt-in for the RViz playback only; see docs/VISUALIZATION.md.
 #
 # Usage:
 #   ./scripts/install_deps_ubuntu.sh
@@ -23,7 +25,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
-  cat <<'USAGE'
+  cat <<'EOF'
 Usage: install_deps_ubuntu.sh [--groups LIST] [--dry-run]
 
 Install everything needed to build, test and lint the project on Ubuntu,
@@ -31,12 +33,12 @@ including the C++ libraries. With these present the build needs no network.
 
 Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
-                 build  toolchain and the C++ libraries
-                 style  clang-format
-                 data   curl, unzip (scripts/download_*.sh)
+                 build     toolchain and the C++ libraries
+                 style     clang-format, clang-tidy
+                 data      curl, unzip (scripts/download_*.sh)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
-USAGE
+EOF
 }
 
 dry_run=false
@@ -68,22 +70,24 @@ if [[ -f /etc/os-release ]]; then
   fi
 fi
 
-# Grouped so a caller can take only what it needs -- the formatting job needs
-# neither a compiler nor the libraries, and installing them anyway is minutes of
-# every run spent on packages the job never calls.
+# Grouped so a caller can take only what it needs. Without them every CI job
+# installs all of this -- five Linux jobs each pulling LLVM to compile a CPU
+# build that calls none of it. The groups are the whole reason the workflows can
+# stop restating package names of their own.
 GROUP_build=(
   # Toolchain and build
   build-essential
   cmake
   ninja-build
   git
-  # C++ libraries the project links against
+  # C++ libraries the project links against. 24.04 and 26.04 both carry
+  # versions new enough for the minimums CMakeLists.txt asks for.
   libeigen3-dev
   nlohmann-json3-dev
   libgtest-dev
   libstb-dev
 )
-GROUP_style=(clang-format)
+GROUP_style=(clang-format clang-tidy)
 # scripts/download_*.sh
 GROUP_data=(curl unzip)
 
@@ -112,7 +116,8 @@ if [[ "${dry_run}" == true ]]; then
 fi
 
 sudo apt-get update
-# --no-install-recommends keeps this to what is actually used.
+# --no-install-recommends keeps this to what is actually used, matching the CI
+# workflow so a local environment and a runner resolve the same packages.
 sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 
 echo ""

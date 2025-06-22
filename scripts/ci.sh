@@ -2,9 +2,9 @@
 # ci.sh — local mirror of the GitHub Actions gates.
 #
 # Same gates in the same order: format (cheapest, no build), configure, build,
-# unit tests, smoke benchmark. Actions splits these across lint.yml and
-# build.yml to parallelize; here they are sequential so the first failure is
-# the one you read.
+# unit tests, smoke benchmark, clang-tidy (slowest). Actions splits these across
+# lint.yml and build.yml to parallelize; here they are sequential so the first
+# failure is the one you read.
 #
 # The flags map onto CMakePresets.json, which is what the workflows configure
 # with -- so `cmake --preset asan-ubsan` and `./scripts/ci.sh --asan --ubsan`
@@ -17,7 +17,7 @@
 #   ./scripts/ci.sh --debug       # -O0 -g instead of the default Release
 #   ./scripts/ci.sh --asan --ubsan
 #   ./scripts/ci.sh --tsan        # races in the CPU pose-grid fan-out
-#   ./scripts/ci.sh --no-style    # skip clang-format
+#   ./scripts/ci.sh --no-style    # skip clang-format / clang-tidy
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,7 +31,7 @@ Usage: ci.sh [--cuda] [--cuda-host] [--debug|--release] [--asan] [--ubsan]
              [--tsan] [--no-style]
 
 Run the same checks as GitHub Actions: format, build, unit tests, smoke
-benchmark.
+benchmark, clang-tidy.
 
 Build options:
   --cuda       Enable the CUDA build (falls back to CPU stubs if nvcc missing).
@@ -52,7 +52,7 @@ Build options:
                code and makes the suite unusable.
 
 Other options:
-  --no-style   Skip the clang-format gate.
+  --no-style   Skip the clang-format and clang-tidy gates.
   -h, --help   Show this help.
 
 Environment:
@@ -137,5 +137,11 @@ ctest --test-dir "${BUILD}" --output-on-failure
   --data-root "${DATA}" \
   --filter smoke_oracle_cpu \
   --output-json "${DATA}/benchmark_ci.json"
+
+# Last because it is the slowest, and because it reads the compile database the
+# configure above just wrote.
+if [[ "${run_style}" == true ]]; then
+  "${ROOT}/scripts/tidy.sh"
+fi
 
 echo "CI checks passed."
