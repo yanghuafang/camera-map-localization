@@ -8,7 +8,7 @@
 | CMake project | `camera_map_localization` |
 | C++ namespace / headers | `cam_loc` under `include/cam_loc/` |
 | Static libraries | `cam_loc_core`, `cam_loc_cuda` |
-| CMake options | `CAMLOC_*` |
+| CMake options | `CAMLOC_*` — see the CMake options table below |
 
 The public repo name reflects **camera map localization**; internal `cam_loc` identifiers are kept for brevity and API stability.
 
@@ -42,23 +42,28 @@ From a clean machine:
 ./scripts/install_deps_ubuntu.sh    # apt
 ```
 
-Both take `--dry-run` to print the package list and exit, and `--groups LIST`
-to install a subset — CI takes only what each job uses.
+Both take `--dry-run` to print the package list and exit. They install the
+compiler toolchain, CMake, Ninja, the `clang-format` / `clang-tidy` gates, and
+Doxygen + Graphviz for the API reference, and the C++ libraries below.
+`--groups LIST` installs a subset — CI takes only what each job uses. They
+deliberately do **not** install CUDA or ROS 2, which are large opt-ins with
+their own vendor instructions.
 
 ## Third-party dependencies
 
-Resolved from the **system package manager**:
+Four libraries, all resolved from the **system package manager**:
 
-| Library | Homebrew | apt | Used for |
-|---------|----------|-----|----------|
+| Library | Homebrew | apt (Ubuntu 26.04) | Used for |
+|---------|----------|--------------------|----------|
 | Eigen | `eigen@3` 3.4.1 ✓ | `libeigen3-dev` 3.4.0 ✓ | Linear algebra |
 | nlohmann/json | `nlohmann-json` 3.12 ✓ | `nlohmann-json3-dev` 3.11.3 ✓ | Perception + map JSON |
 | stb | **no formula** — cached clone | `libstb-dev` ✓ | Image read/write |
 | GoogleTest | `googletest` 1.18 ✓ | `libgtest-dev` 1.17 ✓ | Unit tests |
 
-With them present the configure needs **no network** — on Ubuntu it drops from
-minutes to under a second — and a blocked or throttled route to github.com stops
-being a build failure.
+`./scripts/install_deps_{macos,ubuntu}.sh` install all of them. With them
+present the configure needs **no network** — on Ubuntu it drops from minutes to
+under a second — and a blocked or throttled route to github.com stops being a
+build failure.
 
 **On macOS it is `eigen@3`, not `eigen`.** The unversioned formula is 5.x, and
 Eigen's own version file declares 5.x incompatible with a request for 3.4, so
@@ -90,6 +95,12 @@ CMake Error at CMakeLists.txt:...
     ./scripts/install_deps_ubuntu.sh    (Ubuntu)
 ```
 
+Cloning them at configure time instead would cost a couple of minutes and a
+quarter-gigabyte for every build directory created — four configurations meaning
+four copies of the same sources — while turning a blocked route to github.com
+into a wall of CMake internals. One route is simpler to read and strictly
+faster.
+
 The configure reports what it resolved, because the versions differ between
 machines:
 
@@ -104,7 +115,7 @@ CUDA builds additionally compile `src/cuda/*.cu` into `libcam_loc_cuda.a`.
 
 `$(getconf _NPROCESSORS_ONLN)` reports the core count on both Linux and macOS (substitute `$(nproc)` on Linux if you prefer).
 
-The script picks the build directory for you, which is the usual way in:
+The scripts pick the build directory for you, which is the usual way in:
 
 ```bash
 ./scripts/ci.sh --no-style          # configure, build, test
@@ -125,9 +136,10 @@ Builds land **beside** the repository, one directory per configuration:
 
 ```
 camera-map-localization/                     the repository
-camera-map-localization-build/               the default configuration
+camera-map-localization-build/               ./scripts/ci.sh
 camera-map-localization-build-debug/         ./scripts/ci.sh --debug
 camera-map-localization-build-asan-ubsan/    ./scripts/ci.sh --asan --ubsan
+camera-map-localization-build-coverage/      ./scripts/coverage.sh
 ```
 
 The default configuration gets the bare name and every departure from it adds a
@@ -135,8 +147,9 @@ tag, so two builds that differ only in type still land in different directories.
 
 Out of tree so that a `git status` never has to look past build output, and so
 that deleting a configuration is `rm -rf` on something that is not the working
-tree. One per configuration so switching between build types is not a full
-rebuild.
+tree. One per configuration so switching between Release and a sanitizer build
+is not a full rebuild, and so an instrumented binary is never the one you
+benchmark.
 
 `CAMLOC_BUILD_DIR` overrides the scheme; CI uses it to keep its build inside the
 workspace where the artifact upload can find it.
@@ -167,6 +180,22 @@ workspace, because `actions/upload-artifact` cannot reach outside. `scripts/lib.
 the scripts pass it to the apps as `--data-root`, and CMake passes it to the
 tests, one of which skips when the smoke sequence is absent.
 
+### Build type
+
+`CMAKE_BUILD_TYPE` defaults to **`Release`**. This matters more than it usually
+does: left unset, CMake passes no `-O` flag at all, and unoptimized Eigen inlines
+nothing — the pose grid is a triple loop over Eigen expressions, and the smoke
+sequence runs at ~530 ms/frame that way instead of ~6.8 ms. A timing taken from
+a build with no build type is not a measurement of the algorithm.
+
+```bash
+./scripts/ci.sh --debug   # or -DCMAKE_BUILD_TYPE=Debug by hand
+```
+
+Use `Debug` for a debugger or a sanitizer run, `RelWithDebInfo` when you want
+both optimization and symbols, and `Release` for anything you intend to quote a
+number from.
+
 ### CMake options
 
 | Option | Default | Description |
@@ -175,6 +204,7 @@ tests, one of which skips when the smoke sequence is absent.
 | `CAMLOC_CUDA_HOST_ONLY` | `OFF` | Compile the CUDA **host** paths against the CPU stub — type-checks everything under `#ifdef CAMLOC_CUDA_ENABLED` without nvcc or a GPU |
 | `CAMLOC_BUILD_TESTS` | `ON` | Build `cam_loc_tests` and register CTest targets |
 | `CAMLOC_SANITIZER` | *(empty)* | `-fsanitize=` list, e.g. `address`, `undefined`, `address,undefined` |
+| `CAMLOC_COVERAGE` | `OFF` | Instrument for source-based coverage (Clang only; see `scripts/coverage.sh`) |
 | `CAMLOC_WERROR` | `OFF` | Treat compiler warnings as errors |
 
 The tree builds warning-free under `-Wall -Wextra`, which is always on for
@@ -184,29 +214,14 @@ are not reported as ours). That includes `distance_transform_kernels.cu`, which
 `add_custom_command` hands to `nvcc` rather than to a CMake target, so
 `src/cuda/CMakeLists.txt` forwards the two flags itself with
 `-Xcompiler=-Wall,-Wextra`. It is the one file no CI job can warn about, since
-GitHub's runners have no `nvcc`. `CAMLOC_WERROR` is off by default and not enabled in CI:
-`-Wall` means something different to each compiler in the matrix, so gating on
+GitHub's runners have no `nvcc`. `CAMLOC_WERROR` is off by default and not enabled in CI: `-Wall` means
+something different to each of the three compilers in the matrix, so gating on
 it would turn a compiler upgrade into a red build on unrelated pull requests.
 Turn it on locally when you want the enforcement:
 
 ```bash
 cmake -S . -B ../camera-map-localization-build -DCAMLOC_WERROR=ON
 ```
-
-### Build type
-
-`CMAKE_BUILD_TYPE` defaults to **`Release`**. This matters more than it usually
-does: left unset, CMake passes no `-O` flag at all, and unoptimized Eigen inlines
-nothing — the pose grid is a triple loop over Eigen expressions, and the smoke
-sequence runs at ~2.6 s/frame that way instead of ~15 ms. A timing taken from a
-build with no build type is not a measurement of the algorithm.
-
-```bash
-./scripts/ci.sh --debug   # or -DCMAKE_BUILD_TYPE=Debug by hand
-```
-
-Use `Debug` for a debugger, `RelWithDebInfo` when you want both optimization and
-symbols, and `Release` for anything you intend to quote a number from.
 
 ### Sanitizers
 
@@ -234,16 +249,17 @@ cmake --build "$B" -j"$(getconf _NPROCESSORS_ONLN)"
 ctest --test-dir "$B" --output-on-failure
 ```
 
-ThreadSanitizer is not offered: the library and tests are single-threaded,
+ThreadSanitizer is not offered: the library, apps and tests are single-threaded,
 so it would instrument nothing, and it cannot be combined with AddressSanitizer.
 
 `./scripts/ci.sh --asan --ubsan` does the same and picks its own build directory
 so it does not force a rebuild of the plain one.
 
 Eigen, nlohmann/json and stb are header-only, so they are instrumented along
-code that includes them. GoogleTest comes prebuilt from the package manager and
-is not — which is fine, since the runtime still checks every instrumented
-translation unit and cam_loc's own code is what these are pointed at.
+with the code that includes them. GoogleTest comes prebuilt from the package
+manager and is not — which is fine, since the runtime still checks every
+instrumented translation unit and cam_loc's own code is what these are pointed
+at.
 
 ### CUDA host paths
 
@@ -258,7 +274,39 @@ falls back to the CPU, so tests and benchmarks behave exactly as CPU-only.
 ./scripts/ci.sh --cuda-host
 ```
 
-### Targets produced
+### API documentation
+
+```bash
+./scripts/docs.sh          # → ../<repo>-build/docs/html/index.html
+./scripts/docs.sh --open   # and open it
+```
+
+`.github/workflows/docs.yml` runs the same script on a push to `main` and
+publishes the result to GitHub Pages. It is a separate workflow and not a build
+gate: the warning check is strict and Doxygen's warning set moves between
+releases, so a Doxygen upgrade would otherwise redden pull requests that changed
+nothing here. A failure stops the site being republished and nothing else.
+
+Deliberately not a CMake target: Doxygen and `dot` are the only tools involved,
+and requiring a configure to render
+documentation would be a worse trade. Both come from the dependency installers
+above.
+
+The script fails when Doxygen writes anything to its warning log, because
+Doxygen exits 0 after complaining about a broken reference; a green exit status
+alone means nothing.
+
+The configuration is [`docs/doxygen/Doxyfile`](doxygen/Doxyfile) — a short file
+listing only the settings that differ from Doxygen's defaults, each with the
+reason — and [`docs/doxygen/ApiMainPage.md`](doxygen/ApiMainPage.md), the
+landing page. It covers `include/` only; the narrative guides stay in the
+repository, where their links into `src/` resolve.
+
+Headers are documented with `///` comments whose first sentence is the brief;
+`@param` and `@return` are used where a parameter carries a unit, a frame, or a
+constraint, and left off where the signature already says it.
+
+### Libraries and apps produced
 
 | Target | Type |
 |--------|------|
@@ -307,22 +355,30 @@ matrix leg has to be added there before it gates anything.
 | [`Sanitizers`](../.github/workflows/sanitizers.yml) | `Ubuntu / ASan + UBSan` | `asan-ubsan` preset, then `ctest`. LeakSanitizer rides along here |
 | | `macOS / ASan + UBSan` | the same without LSan, which macOS/arm64 does not support |
 | [`CUDA`](../.github/workflows/cuda.yml) | `nvcc` | real `nvcc` compile of `src/cuda/`, then `ctest`. No hosted runner has a device, so the CUDA paths take the CPU fallback |
+| [`Docs`](../.github/workflows/docs.yml) | `build`, `deploy` | Doxygen to GitHub Pages, every push to `main`. Not a pull-request gate |
 
 `Lint` is its own file because its findings do not depend on the host and neither job needs a
 compile, so a formatting slip reports in under a minute rather than behind a build. Both tools
-are installed by version: the unversioned package follows the runner image, and an unpinned
+are installed by version: the unversioned packages follow the runner image, and an unpinned
 formatter eventually has CI and an editor disagree about a file nobody edited. The runner
 images are pinned for the same reason.
-
-Each job installs only what it uses: `scripts/install_deps_ubuntu.sh --groups build` for the
-builds, and a version-pinned `clang-format-18` / `clang-tidy-18` for the two style jobs. The install scripts remain
-the only package list in the project.
 
 The two sanitizer legs are not equivalent. LeakSanitizer rides along with ASan on Linux and is
 unsupported on macOS/arm64, so `Ubuntu / ASan + UBSan` checks strictly more; `detect_leaks` is
 left at each platform's default rather than forced, since setting it would abort every test on
 the platform that cannot honour it. Both legs run weekly as well as per push, because a
 sanitizer pass is more likely to break from a runner-image toolchain bump than from a commit.
+
+`Docs` carries no `paths:` filter. A required check on a path-filtered workflow deadlocks pull
+requests that touch nothing in the filter, because the workflow never runs and the check never
+reports; a force-push has the same effect for a different reason, since GitHub's compare has no
+common ancestor to diff against and the changed-file set comes out empty. Doxygen on every push
+to `main` costs about a minute and cannot go stale.
+
+Each job installs only what it uses: `scripts/install_deps_ubuntu.sh --groups build` for the
+builds, `--groups docs` for the Doxygen job, and a version-pinned `clang-format-18` /
+`clang-tidy-18` for the two style jobs. The install scripts remain the only package list in
+the project.
 
 No workflow file contains a compiler or CMake flag. Every configuration is a preset in
 [`CMakePresets.json`](../CMakePresets.json), which is what makes a red job reproducible:

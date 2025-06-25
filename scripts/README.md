@@ -7,7 +7,7 @@ All scripts assume repository root as working directory (they resolve paths rela
 | Script | Purpose |
 |--------|---------|
 | `install_deps_macos.sh` | Homebrew: `cmake ninja eigen@3 nlohmann-json googletest llvm`, plus an Xcode Command Line Tools check. `--groups build,style` installs a subset; CI takes only what each job uses |
-| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev libstb-dev clang-format clang-tidy curl unzip`. `--groups build,style,data` installs a subset; CI takes only what each job uses |
+| `install_deps_ubuntu.sh` | apt: `build-essential cmake ninja-build git libeigen3-dev nlohmann-json3-dev libgtest-dev libstb-dev clang-format clang-tidy clang llvm curl unzip`. `--groups build,style,coverage,data` installs a subset; CI takes only what each job uses |
 
 Both take `--dry-run`. Between them they install everything the build links
 against, so the configure itself needs no network. Neither installs CUDA or
@@ -21,6 +21,7 @@ ROS 2, which are large opt-ins with their own instructions.
 | `run_smoke.sh` | Prepare smoke data + run `run_sequence` (CPU and CUDA if GPU present) |
 | `run_benchmark.sh` | Smoke regression + micro-benchmarks; optional kitti00 if poses downloaded |
 | `build_ros.sh` | Build optional `cam_loc_ros` package; installs ROS 2 first if it is missing (`--install-ros` to skip the prompt) |
+| `coverage.sh` | Instrumented build + `ctest` + line/function report; `--html` for a browsable one |
 | `remote_ubuntu.sh` | Run any of these on the Ubuntu host, optionally syncing the tree first |
 
 Builds land **beside** the repository, one directory per configuration:

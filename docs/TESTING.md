@@ -5,24 +5,24 @@
 Build and run everything:
 
 ```bash
-./scripts/ci.sh
+./scripts/ci.sh --no-style
 ```
+
+Builds land beside the repository, one directory per configuration
+(`../<repo>-build`, `../<repo>-build-asan-ubsan`, …); see
+[BUILD.md](BUILD.md#build-directories).
 
 `CAMLOC_BUILD_CUDA` defaults on under Linux and off on macOS; add
 `-DCAMLOC_BUILD_CUDA=ON` explicitly if you want the GPU kernels on a machine
 where the default is off. `CMAKE_BUILD_TYPE` defaults to `Release` — see
 [BUILD.md](BUILD.md#build-type) for why that is not a detail.
 
-Builds land beside the repository, one directory per configuration
-(`../<repo>-build`, `../<repo>-build-asan-ubsan`, …); see
-[BUILD.md](BUILD.md#build-directories).
-
 Or, by hand:
 
 ```bash
 B=../camera-map-localization-build
 ctest --test-dir "$B" --output-on-failure
-"$B"/tests/cam_loc_tests --gtest_filter='MathTest.*'
+"$B"/tests/cam_loc_tests --gtest_filter='LocalizationEngineTest.*'
 ```
 
 ### Coverage areas
@@ -31,21 +31,25 @@ ctest --test-dir "$B" --output-on-failure
 |------|----------|
 | Frames | `FramesTest` — the cam0 ↔ vehicle convention everything geometric rests on |
 | Math / KITTI I/O | `MathTest`, `CalibParserTest`, `PoseReaderTest` |
-| Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted; `OsmMapTest` — JSON, OSM XML and georef |
-| Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest` |
-| Eval / benchmark | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest`, `BenchmarkTest` |
-| CUDA parity | `CudaTest` (GPU vs CPU when CUDA available) |
-| Visualization | `VizTest` |
-| End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
+| Map | `CorridorMapTest` — including that lane boundaries are *lateral* and that upright landmarks are emitted |
+| Perception | `PerceptionJsonTest`, `SemanticKittiTest`, `SemanticLidarTest`, `ResolveTest` |
+| Core matching | `DistanceTransformTest`, `PoseSamplerTest` — including along-track recovery and sub-cell refinement |
 | Filter | `LocalizationKfTest` — convergence away from identity attitude, and covariance well-formedness |
-| Core matching | `DistanceTransformTest`, `PoseSamplerTest` — including along-track recovery and sub-cell refinement; `CostGridTest`, `CostAggregatorTest` |
+| End to end | `LocalizationEngineTest` — straight *and* turning, with pose accuracy asserted |
+| CUDA parity | `CudaTest` (GPU vs CPU when CUDA available) |
+| Eval / benchmark | `PoseErrorTest` — the error split onto vehicle axes, including that it follows GT heading; `SequenceEvalTest`, `BenchmarkTest` |
+| Visualization | `VizTest` |
+
+Several of these exist because the defect they cover is invisible to the obvious
+test: a straight, rotation-free, oracle-perception run agrees with itself
+whatever the frames are doing.
 
 Smoke benchmark test (`BenchmarkTest.SmokeOracleCpuPasses`) requires prepared smoke data; it skips if `<repo>-data/smoke_kitti` is missing.
 
 ## Smoke integration (no KITTI download)
 
 ```bash
-./scripts/prepare_smoke_kitti.sh 120
+./scripts/prepare_smoke_kitti.sh
 ./scripts/run_smoke.sh
 ```
 
@@ -57,6 +61,17 @@ Smoke benchmark test (`BenchmarkTest.SmokeOracleCpuPasses`) requires prepared sm
 ```
 
 See [BENCHMARK.md](BENCHMARK.md) for case list and thresholds.
+
+## Coverage
+
+```bash
+./scripts/coverage.sh          # per-file line and function report
+./scripts/coverage.sh --html   # browsable line-by-line
+```
+
+Clang only — the instrumentation and the report tools have to come from one
+toolchain. It measures `src/` and `include/`; `apps/` and `tests/` are excluded,
+since neither is the thing under test.
 
 ## Sanitizers
 
@@ -84,8 +99,9 @@ It cannot be combined with `--asan`; the two replace the same allocator.
 ## CUDA host paths without a GPU
 
 Code inside `#ifdef CAMLOC_CUDA_ENABLED` is not compiled by a CPU-only build, so
-a rename can leave it behind while every gate above stays green. This compiles
-it against the CPU stub, needing neither nvcc nor a GPU:
+a rename can leave it behind while every gate above stays green, which is how
+those call sites drift out of sync with the CUDA header. This compiles
+them against the CPU stub, needing neither nvcc nor a GPU:
 
 ```bash
 ./scripts/ci.sh --cuda-host

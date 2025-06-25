@@ -87,8 +87,8 @@ camloc_data_dir() {
 # clang selects a toolchain with no <cmath> and no libstdc++.so. Every
 # clang-based tool then fails at once, and the error names a standard header
 # rather than the real cause: clang-tidy reports "'cmath' file not found" on
-# every file in the tree. g++ is unaffected, so the ordinary build keeps passing
-# and only the clang tools break.
+# every file in the tree, and coverage.sh cannot configure at all. g++ is
+# unaffected, so the ordinary build keeps passing and only the clang tools break.
 #
 # Probed rather than assumed: the flag is emitted only when the default cannot
 # compile and link, so a machine where clang is set up correctly gets nothing.

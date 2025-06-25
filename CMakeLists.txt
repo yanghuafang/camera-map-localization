@@ -173,6 +173,20 @@ if(CAMLOC_SANITIZER)
   endif()
 endif()
 
+# Source-based coverage instrumentation, for scripts/coverage.sh. Clang only:
+# GCC's --coverage writes a different format that llvm-cov cannot read, and
+# carrying both report paths would double the machinery for one number.
+option(CAMLOC_COVERAGE "Instrument for source-based coverage (Clang)" OFF)
+if(CAMLOC_COVERAGE)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR
+      "CAMLOC_COVERAGE needs Clang; this is ${CMAKE_CXX_COMPILER_ID}.\n"
+      "  Re-run with: CXX=clang++ ./scripts/coverage.sh")
+  endif()
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  add_link_options(-fprofile-instr-generate)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(apps)
 

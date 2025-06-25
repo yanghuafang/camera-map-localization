@@ -35,6 +35,7 @@ Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
                  build     toolchain and the C++ libraries
                  style     clang-format, clang-tidy
+                 coverage  clang, llvm (scripts/coverage.sh)
                  data      curl, unzip (scripts/download_*.sh)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
@@ -88,10 +89,16 @@ GROUP_build=(
   libstb-dev
 )
 GROUP_style=(clang-format clang-tidy)
+# scripts/coverage.sh: it forces CXX=clang++ because the report is built from
+# LLVM's source-based instrumentation, not GCC's .gcda files. clang and llvm
+# are both distro-default aliases, so they stay on the same major version --
+# which matters, since llvm-profdata rejects a raw profile written by a
+# different one.
+GROUP_coverage=(clang llvm)
 # scripts/download_*.sh
 GROUP_data=(curl unzip)
 
-ALL_GROUPS=(build style data)
+ALL_GROUPS=(build style coverage data)
 : "${groups:=}"
 if [[ -z "${groups}" ]]; then
   selected=("${ALL_GROUPS[@]}")
