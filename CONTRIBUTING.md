@@ -2,6 +2,12 @@
 
 Thank you for contributing to **camera-map-localization**. This project is a clean-room C++ implementation of camera map-matching localization for KITTI; it must remain free of proprietary automotive SDK code.
 
+## Before you start
+
+1. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the per-frame pipeline (predict → map match → EKF updates).
+2. Skim [docs/BUILD.md](docs/BUILD.md) and [docs/TESTING.md](docs/TESTING.md).
+3. For data or eval changes, check [docs/KITTI_DATA.md](docs/KITTI_DATA.md) and [scripts/README.md](scripts/README.md).
+
 ## Development setup
 
 ```bash
@@ -95,6 +101,7 @@ When touching localization core (`localization_engine`, `localization_kf`, `pose
 
 1. Run full unit tests and `./scripts/run_benchmark.sh` (or at least `--filter smoke`).
 2. Note behavior changes in the PR description (RMSE, match rate, latency).
+3. Update [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) if the pipeline order or measurements change.
 
 ## What not to commit
 

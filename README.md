@@ -46,7 +46,8 @@ Gate on ambiguity and fit → EKF update
 
 - [BUILD.md](docs/BUILD.md) — prerequisites, CMake options, build directories
 - [KITTI_DATA.md](docs/KITTI_DATA.md) — data layout, formats, where each input comes from
-- [KITTI_RUN.md](docs/KITTI_RUN.md) — smoke test, download, running a sequence
+- [KITTI_RUN.md](docs/KITTI_RUN.md) — download, evaluation, perception pipelines
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — the algorithm, its frames, and its input/output contract
 - [TESTING.md](docs/TESTING.md) — unit tests, sanitizers, style gates
 - [BENCHMARK.md](docs/BENCHMARK.md) — regression suite, thresholds, measured numbers
 - [VISUALIZATION.md](docs/VISUALIZATION.md) — offline PNG debug views and ROS 2 RViz playback

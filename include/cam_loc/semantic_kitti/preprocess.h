@@ -19,7 +19,7 @@ namespace cam_loc::semantic_kitti {
 ///
 /// What is not here is worth knowing: SemanticKITTI has **no traffic-light and
 /// no crosswalk class**. Those two landmark types cannot be extracted from this
-/// dataset at all, whatever the localizer would like.
+/// dataset at all, whatever the localizer would like; see docs/ARCHITECTURE.md.
 enum LabelId : uint16_t {
   kRoad = 40,
   kParking = 44,

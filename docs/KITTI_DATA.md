@@ -15,7 +15,9 @@ D=../camera-map-localization-data
 
 ## Input provenance
 
-Which artifacts are downloaded, which are generated, and by what.
+Which artifacts are downloaded, which are generated, and by what. The shapes,
+frames and units these become on the way into the engine are in
+[ARCHITECTURE.md](ARCHITECTURE.md#inputs-and-outputs).
 
 | Artifact | Dataset | Produced by | Becomes |
 |----------|---------|-------------|---------|
@@ -67,8 +69,9 @@ Standard KITTI odometry calibration keys:
 unimplemented. `R0_rect` and `Tr` are read only by `Calibration::T_cam0_velo()`.
 
 **Rig frame:** cam0 is the rig frame (`T_rig_cam0 = I`) — X right, Y down,
-Z forward. `core::Frames` is the only place the conversion to the vehicle frame
-(X forward, Y left, Z up) lives.
+Z forward. The pose grid and the bird's-eye raster reason in a vehicle frame
+(X forward, Y left, Z up); `core::Frames` is the only place that conversion
+lives. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Poses
 
@@ -131,7 +134,8 @@ report success however far the estimate had drifted.
 | Crosswalk | **none** | — |
 
 The last two rows are not an omission. SemanticKITTI has no class for either, so
-they cannot be extracted from this dataset at any effort.
+they cannot be extracted from this dataset at any effort — see
+[ARCHITECTURE.md](ARCHITECTURE.md) for what each class would have constrained.
 
 The scan orientation is chosen per class: lane markings and road edges run
 across the image, poles and signs stand upright, and a horizontal scan meets a
@@ -203,3 +207,12 @@ OSM ways with `highway=*`, `barrier=*`, or `man_made=kerb` are imported as polyl
 
 JSON may include a top-level `"georef"` block; per-polyline `"coord_frame": "wgs84"`
 stores `[lat_deg, lon_deg, alt_m]` instead of world XYZ.
+
+## Evaluation metrics
+
+Reported by `eval_sequence` and `benchmark`:
+
+- **Translation RMSE** — root-mean-square of ‖t_est − t_gt‖ over frames
+- **Yaw RMSE** — root-mean-square heading difference (degrees), measured about
+  the vehicle up axis
+- **Match rate** — fraction of frames with successful map-matching update
