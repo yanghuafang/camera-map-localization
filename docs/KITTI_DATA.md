@@ -12,6 +12,7 @@ D=../camera-map-localization-data
 |---------|-----|
 | KITTI Odometry (`data_odometry_*`) | Poses, calib, grayscale images |
 | Semantic KITTI (optional) | Lane, road-boundary, pole and traffic-sign extraction |
+| KITTI Raw (optional v2) | IMU/GPS for global prior |
 
 ## Input provenance
 
@@ -23,19 +24,33 @@ frames and units these become on the way into the engine are in
 |----------|---------|-------------|---------|
 | `poses/XX.txt` | KITTI Odometry | `scripts/download_kitti_odometry.sh` — direct download, ~2 MB | GT pose, and the relative ego for the predict step |
 | `dataset/sequences/XX/calib.txt` | KITTI Odometry | same script | Intrinsics, and the velodyne→cam0 extrinsic |
-| `dataset/sequences/XX/velodyne/*.bin` | KITTI Odometry | Manual download (~80 GB archive) | Labelled points projected into the image |
-| `sequences/XX/labels/*.label` | Semantic KITTI | `scripts/download_semantic_kitti_labels.sh` | Per-point class for the scan above |
+| `dataset/sequences/XX/velodyne/*.bin` | KITTI Odometry | Manual download (~80 GB archive) | Input to `preprocess_kitti --mode lidar` |
+| `sequences/XX/labels/*.label` | Semantic KITTI | `scripts/download_semantic_kitti_labels.sh` | Input to `preprocess_kitti --mode lidar` |
 | `dataset/sequences/XX/image_0/*.png` | KITTI Odometry (gray archive) | Manual download, **optional** | Visualization background only — never an algorithm input |
-| `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | C++ `preprocess_kitti` (`--mode lidar` or `--mode png`) | 2-D image-space perception: lanes, road edges, poles, signs |
 | `<repo>-data/smoke_kitti/` | — | `scripts/prepare_smoke_kitti.sh [frames]` — synthesized, no download | A straight synthetic sequence for the smoke test |
-| Trajectory corridor map | derived | C++ `TrajectoryCorridorMap`, from the GT poses at run time | 3-D world map: lane geometry on the road, plus poles and signs |
+| `<repo>-data/perception/<seq>/<frame:06d>.lanes.json` | derived | C++ `preprocess_kitti` (`--mode lidar` or `--mode png`) | 2-D image-space perception: lanes, road edges, poles, signs |
+| Trajectory corridor map | derived | C++ `TrajectoryCorridorMap`, from the GT poses at run time | 3-D world map (the default when no `--map-path`): lane geometry on the road, plus poles and signs |
 | `<repo>-data/map/<seq>/*.json` | user-supplied | Exported by any external tool | 3-D world map |
 | `*.osm` + `georef.json` | OpenStreetMap | User-supplied extract | 3-D world map, via `MapGeoref` |
+| — | camera images | **TODO: run a camera perception model** | Would replace the `preprocess_kitti` output as the source of lane and boundary polylines |
+
+Two things worth noticing in that table.
+
+Nothing in the current pipeline reads a camera image. The "camera perception" is
+either projected from the map or derived from SemanticKITTI's LiDAR labels, so
+the only genuinely camera-derived input is the one marked TODO.
+
+And the default map is built from ground-truth poses, so the oracle path is a
+closed loop by construction: the map comes from GT, the perception is projected
+from GT, and matching them recovers GT. That measures the backend — whether the
+search, the frames and the filter agree — and not perception. It is an upper
+bound, not an accuracy claim; the honest number needs a real map, which KITTI
+Odometry does not ship. See [OPEN_ITEMS.md](OPEN_ITEMS.md).
 
 ## Directory layout (expected)
 
 Datasets live beside the repository, not inside it — see
-[BUILD.md](BUILD.md#build-directories).
+[BUILD.md](BUILD.md#dataset-directory).
 
 ```
 camera-map-localization/            the repository
@@ -51,12 +66,6 @@ camera-map-localization-data/
   smoke_kitti/                      # scripts/prepare_smoke_kitti.sh
 ```
 
-The default map is built from ground-truth poses, so a run against it is a
-closed loop by construction: the map comes from GT and matching against it
-recovers GT. That measures the backend — whether the search, the frames and the
-filter agree — and not localization accuracy. KITTI Odometry ships no HD map,
-which is why the stand-in exists.
-
 ## calib.txt parsing
 
 Standard KITTI odometry calibration keys:
@@ -64,9 +73,6 @@ Standard KITTI odometry calibration keys:
 - `P0`, `P1` — 3×4 projection (rectified cam0/cam1)
 - `R0_rect` — 3×3 rectification
 - `Tr` — 3×4 velodyne → cam0
-
-`P1` is parsed and never read: the right camera is unused, as stereo is
-unimplemented. `R0_rect` and `Tr` are read only by `Calibration::T_cam0_velo()`.
 
 **Rig frame:** cam0 is the rig frame (`T_rig_cam0 = I`) — X right, Y down,
 Z forward. The pose grid and the bird's-eye raster reason in a vehicle frame
@@ -107,20 +113,11 @@ File: `<repo>-data/perception/<seq>/<frame:06d>.lanes.json`
 One list, not one per class: every polyline carries its own `type`, so a new
 landmark class costs an enumerator and nothing else.
 
-### Perception sources
+Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
+`solid`, `dashed`, `edge` are also accepted on read). Points are **rectified
+image coordinates** (KITTI cam0, via `P0`).
 
-`ResolvePerception` picks one per frame:
-
-| Source | Produced by | Status |
-|--------|-------------|--------|
-| `oracle` | `SynthesizeFromMap`, projecting the local map at the **ground-truth** pose | An upper bound on the backend, not a perception result |
-| `file` | The JSON above, produced offline | Lane markings, road boundaries, poles, traffic signs |
-| `noisy` | Either of the above, plus seeded jitter, dropout and bias | — |
-| `auto` | File if present, else oracle | The default |
-
-The oracle projects at ground truth, never at the filter estimate. Projecting
-from the estimate would make the observation follow it, so the match would
-report success however far the estimate had drifted.
+Generate with `preprocess_kitti` (`--mode lidar` or `--mode png`).
 
 ### What the datasets can and cannot give
 
@@ -141,28 +138,9 @@ The scan orientation is chosen per class: lane markings and road edges run
 across the image, poles and signs stand upright, and a horizontal scan meets a
 pole one or two pixels at a time and discards it as too short.
 
-Types: `lane_solid`, `lane_dashed`, `road_edge`, `pole`, `sign` (the short forms
-`solid`, `dashed`, `edge` are also accepted on read). Points are **rectified
-image coordinates** (KITTI cam0, via `P0`).
-
-Generate with `preprocess_kitti` (`--mode lidar` or `--mode png`), which has two
-input paths:
-
-| `--mode` | Reads | Origin of that data |
-|----------|-------|---------------------|
-| `lidar` | `velodyne/NNNNNN.bin` (float32 x, y, z, intensity) + `labels/NNNNNN.label` (uint32, low 16 bits = class) | Velodyne archive (~80 GB, manual) + `scripts/download_semantic_kitti_labels.sh` |
-| `png` | `<labels-root>/<seq>/labels/NNNNNN.label` — despite the extension, a **16-bit grayscale PNG** label raster | Prepared externally |
-
-Both end at the same JSON, so the engine sees one 2-D contract either way.
-
 ## Map (trajectory corridor)
 
-Auto-generated at runtime from GT poses if no file is provided:
-`TrajectoryCorridorMap` lays two solid lane boundaries and a dashed centreline
-on the road surface, and places poles and signs beside it. The upright
-landmarks are the point of it — lane geometry runs parallel to travel, so it
-pins the vehicle laterally and in heading but says almost nothing about where
-along the road it is.
+Auto-generated at runtime from GT poses if no file is provided.
 
 Optional file `<repo>-data/map/<seq>/corridor.map.json`:
 
@@ -176,13 +154,12 @@ Optional file `<repo>-data/map/<seq>/corridor.map.json`:
 
 Points in **world frame** (same as KITTI pose world).
 
-`CreateMapLoader` picks the source from the path: empty means the corridor,
-`.osm` / `.xml` means native OSM, anything else is read as world-frame JSON.
+Load with `run_sequence --map-path <repo>-data/map/00/corridor.map.json` (world-frame JSON).
 
 ### Native OSM + georef
 
 ```bash
---map-path extract.osm \
+run_sequence --map-path extract.osm \
   --map-georef "$D"/map/00/georef.json \
   --map-align-yaw   # optional: align +X to frame-0 motion
 ```

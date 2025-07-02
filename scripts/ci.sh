@@ -10,6 +10,9 @@
 # with -- so `cmake --preset asan-ubsan` and `./scripts/ci.sh --asan --ubsan`
 # build the same thing in the same directory.
 #
+# The flags below configure the build the gates then run against; the gates
+# themselves are the same either way.
+#
 # Usage:
 #   ./scripts/ci.sh
 #   ./scripts/ci.sh --cuda        # CUDA build; CI has no GPU and always uses CPU
@@ -26,7 +29,7 @@ source "${ROOT}/scripts/lib.sh"
 DATA="$(camloc_data_dir "${ROOT}")"
 
 usage() {
-  cat <<'USAGE'
+  cat <<'EOF'
 Usage: ci.sh [--cuda] [--cuda-host] [--debug|--release] [--asan] [--ubsan]
              [--tsan] [--no-style]
 
@@ -59,7 +62,7 @@ Environment:
   CAMLOC_BUILD_DIR  Build directory. Defaults to a sibling of the repository,
                     ../<repo>-build[-<tags>], so each configuration keeps its
                     own and none of them sit inside the source tree.
-USAGE
+EOF
 }
 
 CMAKE_EXTRA=()
@@ -111,9 +114,9 @@ fi
 [[ -n "${build_type}" ]] && CMAKE_EXTRA+=("-DCMAKE_BUILD_TYPE=${build_type}")
 
 # The build type tags the directory only when it is not the default, so the
-# ordinary Release build gets the bare ../<repo>-build. Derived
-# from build_type after the parse rather than inside it, so `--debug --release`
-# cannot leave a Release build sitting in a directory named debug.
+# ordinary Release build gets the bare ../<repo>-build. Derived from build_type
+# after the parse rather than inside it, so `--debug --release` cannot leave a
+# Release build sitting in a directory named debug.
 if [[ "${build_type}" == Debug ]]; then
   build_tags=(debug ${build_tags[@]+"${build_tags[@]}"})
 fi
@@ -126,7 +129,7 @@ if [[ "${run_style}" == true ]]; then
   "${ROOT}/scripts/format.sh" --check
 fi
 
-cmake -S "${ROOT}" -B "${BUILD}" ${CMAKE_EXTRA[@]+"${CMAKE_EXTRA[@]}"} -DCAMLOC_BUILD_TESTS=ON
+cmake -S "${ROOT}" -B "${BUILD}" "${CMAKE_EXTRA[@]}" -DCAMLOC_BUILD_TESTS=ON
 cmake --build "${BUILD}" -j"$(camloc_nproc)"
 
 "${ROOT}/scripts/prepare_smoke_kitti.sh"

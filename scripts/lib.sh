@@ -17,6 +17,7 @@ camloc_nproc() {
 # Build directory for a configuration, as a sibling of the repository.
 #
 #   camloc_build_dir "${ROOT}"                -> ../camera-map-localization-build
+#   camloc_build_dir "${ROOT}" asan ubsan     -> ../camera-map-localization-build-asan-ubsan
 #   camloc_build_dir "${ROOT}" debug          -> ../camera-map-localization-build-debug
 #
 # The default configuration gets the bare name; every departure from it adds a
@@ -28,10 +29,12 @@ camloc_nproc() {
 # beside the repository rather than in a shared scratch directory so that a tree
 # copied to another host (see remote_ubuntu.sh) leaves its build behind.
 #
-# One directory per configuration, so switching between build types is not a
-# full rebuild each time.
+# One directory per configuration, so switching between Release and a sanitizer
+# build is not a full rebuild each time -- and so an instrumented binary cannot
+# be mistaken for the one being benchmarked.
 #
-# CAMLOC_BUILD_DIR overrides the whole scheme.
+# CAMLOC_BUILD_DIR overrides the whole scheme, which is what CI uses to keep its
+# build inside the workspace where the artifact upload can find it.
 camloc_build_dir() {
   local root="$1"
   shift
@@ -53,7 +56,8 @@ camloc_build_dir() {
 #
 #   camloc_data_dir "${ROOT}"   -> ../camera-map-localization-data
 #
-# Holds the downloaded and generated datasets, and the output the apps write.
+# Holds smoke_kitti/ (generated), kitti_odometry/ and perception/ (downloaded or
+# preprocessed), and the CSV and JSON the eval and benchmark apps write.
 #
 # Outside the repository for the same reasons as the build directories, plus one
 # of its own: KITTI's velodyne set alone is ~80 GB, and a dataset that large
@@ -61,7 +65,9 @@ camloc_build_dir() {
 # rsync pay for it. Nothing here is ours to version -- it is downloaded or
 # regenerated -- so the repository is better off not having a place to put it.
 #
-# CAMLOC_DATA_DIR overrides the scheme.
+# CAMLOC_DATA_DIR overrides the scheme, which is what CI uses to keep the
+# benchmark JSON inside the workspace where the artifact upload can find it.
+# CMakeLists.txt computes the same default for the tests; keep the two in step.
 camloc_data_dir() {
   local root="$1"
   if [[ -n "${CAMLOC_DATA_DIR:-}" ]]; then
@@ -151,11 +157,11 @@ camloc_ros_dir() {
   echo "$(cd "${root}/.." && pwd)/${name}-build-ros"
 }
 
-# Resolve a clang tool (clang-format) and echo its path.
+# Resolve a clang tool (clang-format, clang-tidy) and echo its path.
 #
-# Order: CAMLOC_CLANG_FORMAT override, the Homebrew llvm keg, then PATH. The keg
-# comes first because Xcode ships neither clang-format nor clang-tidy, so on
-# macOS PATH would otherwise miss them entirely or find an unrelated install.
+# Order: CAMLOC_CLANG_FORMAT / CAMLOC_CLANG_TIDY override, the Homebrew llvm keg,
+# then PATH. The keg comes first because Xcode ships neither tool, so on macOS
+# PATH would otherwise miss them entirely or find an unrelated install.
 #
 # Path goes to stdout for $(...) capture; the banner goes to stderr. The banner
 # names the binary and version because differing results between two machines are
