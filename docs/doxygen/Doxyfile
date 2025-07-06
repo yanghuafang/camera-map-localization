@@ -1,0 +1,108 @@
+# Doxygen configuration for camera-map-localization. Run with scripts/docs.sh,
+# which invokes doxygen from the repository root so every path below is
+# repo-relative.
+#
+# Only non-default settings appear here. Doxygen supplies the rest, so this file
+# stays short enough to read and review; a generated Doxyfile is ~2500 lines of
+# mostly-defaults and shows nothing about what this project chose.
+
+PROJECT_NAME           = camera-map-localization
+PROJECT_BRIEF          = "Camera map-matching localization on KITTI"
+# scripts/docs.sh overrides this with the real build directory, which sits
+# beside the repository; this default is only for a by-hand
+# `doxygen docs/doxygen/Doxyfile` from the repository root.
+OUTPUT_DIRECTORY       = build/docs
+
+# The public API only. src/ carries the implementation commentary, which is
+# meant to be read next to the code rather than mixed into a reference index.
+#
+# The narrative guides are also left out, and the landing page links to them on
+# GitHub instead of rendering them. They link into source files
+# (src/benchmark/benchmark_runner.cc and the like), and those links resolve in
+# the repository but would 404 in the generated site.
+INPUT                  = include docs/doxygen/ApiMainPage.md
+USE_MDFILE_AS_MAINPAGE = docs/doxygen/ApiMainPage.md
+FILE_PATTERNS          = *.h *.md
+RECURSIVE              = YES
+
+# include/ is the include root, so stripping it makes documented headers read
+# the way the #include lines do: "cam_loc/core/cost_grid.h", not an absolute
+# path that depends on where the repository was cloned.
+STRIP_FROM_PATH        = include
+STRIP_FROM_INC_PATH    = include
+
+# Document what is documented, nothing else: EXTRACT_ALL would manufacture an
+# empty entry for every declaration and bury the ones that say something, and
+# the frame and unit notes are the whole reason this reference exists.
+#
+# HIDE_UNDOC_MEMBERS is the one place this departs from lcc's settings. Left on,
+# a struct whose fields carry no /// renders with no fields at all -- and it is
+# the aggregates here that a caller has to get right, so LocalizationResult
+# showing an empty body is worse than showing a field whose name and type speak
+# for themselves. Classes stay hidden when nothing about them is documented,
+# which is what keeps the manufactured pages away.
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = NO
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = YES
+
+# The first sentence of a /// block is the brief; the rest is the detail. This
+# is what lets the existing header prose become documentation without adding a
+# \brief to several hundred entities.
+JAVADOC_AUTOBRIEF      = YES
+MARKDOWN_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+
+# Eigen's aliases (Mat44, Vec3) are what the signatures are written in; leaving
+# them unexpanded keeps a reader from having to chase the alias.
+TYPEDEF_HIDES_STRUCT   = NO
+
+# CAMLOC_CUDA_ENABLED so the CUDA-guarded declarations are visible; the header
+# guards are otherwise the only macros that would show up as documented.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = NO
+PREDEFINED             = CAMLOC_CUDA_ENABLED
+
+# Inheritance and include graphs earn their space: the map loaders form a
+# hierarchy, and the core headers include each other in a specific order that is
+# easier to see drawn than to reconstruct from #include lines. Call graphs do
+# not -- on a distance transform they are a wall of edges. Directory graphs
+# restate one #include edge per page.
+HAVE_DOT               = YES
+UML_LOOK               = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = NO
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = NO
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+DIRECTORY_GRAPH        = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+ALPHABETICAL_INDEX     = YES
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+
+# Warnings are the gate: scripts/docs.sh fails when the log is non-empty, the
+# same way tidy.sh treats clang-tidy's stdout. Two are off deliberately.
+#
+# WARN_IF_UNDOCUMENTED pairs with EXTRACT_ALL = NO above: documenting every
+# declaration is not the goal, so an undocumented one is a choice, not a defect.
+#
+# WARN_IF_INCOMPLETE_DOC and WARN_NO_PARAMDOC fire on a function that documents
+# some parameters but not all, or none. The convention here is to document
+# exactly the parameters that carry a unit, a frame, or a constraint --
+# `@param uv Pixel coordinates` on ProjectRigToImage is the line-by-line
+# narration CONTRIBUTING.md rules out. This is a deliberate departure from lcc,
+# whose headers document parameters exhaustively.
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = NO
+WARN_NO_PARAMDOC       = NO
+WARN_LOGFILE           = build/docs/doxygen-warnings.log

@@ -12,16 +12,14 @@
 # 3.4.1 and is keg-only, which CMakeLists.txt handles by adding the keg to
 # CMAKE_PREFIX_PATH.
 #
-# llvm is for clang-format and clang-tidy, not for compiling: Xcode ships
-# neither, and the compiler used is Apple Clang. The keg is not linked into
-# PATH, which is why lib.sh resolves both tools through `brew --prefix llvm`
-# rather than expecting them on PATH.
-#
 # stb has no Homebrew formula at all, so it is cloned once per machine into the
 # directory CMakeLists.txt hints at. Ubuntu packages it as libstb-dev, so this
 # step has no counterpart there.
 #
-# curl and unzip ship with macOS, so the download scripts need nothing here.
+# llvm is for clang-format and clang-tidy, not for compiling: Xcode ships
+# neither, and the compiler used is Apple Clang. The keg is not linked into
+# PATH, which is why lib.sh resolves both tools through `brew --prefix llvm`
+# rather than expecting them on PATH.
 #
 # Not installed here, and why:
 #   CUDA   — unavailable on macOS. Builds fall back to the CPU stub.
@@ -38,15 +36,16 @@ usage() {
   cat <<'EOF'
 Usage: install_deps_macos.sh [--groups LIST] [--dry-run]
 
-Install everything needed to build, test and lint the project on macOS,
-including the C++ libraries. stb has no Homebrew formula and is cloned into the
-shared source cache instead. Eigen comes from eigen@3 (3.4.1); the unversioned
-formula is 5.x, which this project does not build against.
+Install everything needed to build, test, lint and document the project on
+macOS, including the C++ libraries. stb has no Homebrew formula and is cloned
+into the shared source cache instead. Eigen comes from eigen@3 (3.4.1); the
+unversioned formula is 5.x, which this project does not build against.
 
 Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
                  build  cmake, ninja, the C++ libraries, and the stb clone
                  style  llvm (clang-format, clang-tidy)
+                 docs   doxygen, graphviz
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
 EOF
@@ -71,10 +70,11 @@ if [[ "$(uname -s)" != Darwin ]]; then
   exit 1
 fi
 
-# cmake and ninja build; llvm supplies the two style gates. curl and unzip ship
-# with macOS, so the download scripts need nothing here.
-# Grouped so a caller can take only what it needs -- the formatting job needs
-# neither the libraries nor the stb clone.
+# cmake and ninja build; llvm supplies the two style gates; doxygen and graphviz
+# build the API reference. curl and unzip ship with macOS, so the download
+# scripts need nothing here.
+# Grouped so a caller can take only what it needs -- CI builds do not need
+# Doxygen, and the formatting job needs neither the libraries nor the stb clone.
 GROUP_build=(
   cmake ninja        # build
   eigen@3            # Eigen3::Eigen -- 3.4.1; the unversioned formula is 5.x
@@ -82,8 +82,9 @@ GROUP_build=(
   googletest         # GTest::gtest_main
 )
 GROUP_style=(llvm)   # clang-format, clang-tidy
+GROUP_docs=(doxygen graphviz)
 
-ALL_GROUPS=(build style)
+ALL_GROUPS=(build style docs)
 : "${groups:=}"
 if [[ -z "${groups}" ]]; then
   selected=("${ALL_GROUPS[@]}")
@@ -166,3 +167,4 @@ done
 echo ""
 echo "macOS build environment ready."
 echo "  Build and test:  ${ROOT}/scripts/ci.sh"
+echo "  API docs:        ${ROOT}/scripts/docs.sh"

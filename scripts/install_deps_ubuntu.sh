@@ -28,14 +28,16 @@ usage() {
   cat <<'EOF'
 Usage: install_deps_ubuntu.sh [--groups LIST] [--dry-run]
 
-Install everything needed to build, test and lint the project on Ubuntu,
-including the C++ libraries. With these present the build needs no network.
+Install everything needed to build, test, lint and document the project on
+Ubuntu, including the C++ libraries. With these present the build needs no
+network.
 
 Options:
   --groups LIST  Comma-separated subset to install; default is all of them.
                  build     toolchain and the C++ libraries
                  style     clang-format, clang-tidy
                  coverage  clang, llvm (scripts/coverage.sh)
+                 docs      doxygen, graphviz
                  data      curl, unzip (scripts/download_*.sh)
   --dry-run      Print what would be installed and exit.
   -h, --help     Show this help.
@@ -72,9 +74,9 @@ if [[ -f /etc/os-release ]]; then
 fi
 
 # Grouped so a caller can take only what it needs. Without them every CI job
-# installs all of this -- five Linux jobs each pulling LLVM to compile a CPU
-# build that calls none of it. The groups are the whole reason the workflows can
-# stop restating package names of their own.
+# installs all of this -- five Linux jobs each pulling Doxygen, Graphviz and
+# LLVM to compile a CPU build that calls none of them. The groups are the whole
+# reason the workflows can stop restating package names of their own.
 GROUP_build=(
   # Toolchain and build
   build-essential
@@ -95,10 +97,11 @@ GROUP_style=(clang-format clang-tidy)
 # which matters, since llvm-profdata rejects a raw profile written by a
 # different one.
 GROUP_coverage=(clang llvm)
+GROUP_docs=(doxygen graphviz)
 # scripts/download_*.sh
 GROUP_data=(curl unzip)
 
-ALL_GROUPS=(build style coverage data)
+ALL_GROUPS=(build style coverage docs data)
 : "${groups:=}"
 if [[ -z "${groups}" ]]; then
   selected=("${ALL_GROUPS[@]}")
@@ -130,3 +133,4 @@ sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 echo ""
 echo "Ubuntu build environment ready."
 echo "  Build and test:  ${ROOT}/scripts/ci.sh"
+echo "  API docs:        ${ROOT}/scripts/docs.sh"
