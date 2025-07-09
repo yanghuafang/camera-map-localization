@@ -86,7 +86,7 @@ resolve_ros_setup() {
 # question has to be asked before anything is downloaded.
 confirm_ros_install() {
   [[ "${install_ros}" == ask ]] || return 0
-  # No prompt without a terminal: an ssh session or a driver script reaches this
+  # No prompt without a terminal: run_all.sh and remote_ubuntu.sh reach this
   # over ssh, and a 2 GB install is not something to start unattended.
   if [[ ! -t 0 ]]; then
     echo "ROS 2 not found." >&2

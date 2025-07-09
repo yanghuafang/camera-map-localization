@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Download SemanticKITTI odometry labels (~172 MB) and merge into kitti_odometry tree.
 #
-# Does nothing when the labels are already there. This archive is slow to
-# fetch -- ten minutes on a bad day -- and re-fetching it to overwrite
-# identical files is pure cost. --force fetches anyway, which is the
+# Does nothing when the labels are already there. This archive is the slowest
+# step in run_all.sh -- ten minutes on a bad day -- and re-fetching it to
+# overwrite identical files is pure cost. --force fetches anyway, which is the
 # repair for a partial or corrupted unpack.
 #
 # Usage:

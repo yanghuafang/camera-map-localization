@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Download KITTI Odometry poses + calibration (no registration required for these archives).
 #
-# Does nothing when the data is already there: re-fetching an archive to
-# overwrite byte-identical files is a slow way to accomplish nothing.
-# --force fetches anyway, which is the repair for a partial or corrupted
-# unpack.
+# Does nothing when the data is already there. run_all.sh runs this on every
+# pass, and re-fetching an archive to overwrite byte-identical files is a slow
+# way to accomplish nothing. --force fetches anyway, which is the repair for a
+# partial or corrupted unpack.
 #
 # Usage:
 #   ./scripts/download_kitti_odometry.sh [DEST]

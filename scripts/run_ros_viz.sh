@@ -2,8 +2,7 @@
 # Launch cam_loc ROS RViz visualization on smoke KITTI.
 #
 # `ros2 launch` runs until it is interrupted, so by default this waits for you
-# to close RViz. --duration bounds it instead, which is what an unattended run
-# needs:
+# to close RViz. --duration bounds it instead, which is what run_all.sh uses:
 # a script whose output is a pass/fail summary cannot sit waiting for a window
 # to be closed.
 #

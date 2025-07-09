@@ -19,7 +19,7 @@
 # ...or the same from inside scripts/, which is how these are usually run:
 #
 #   ./remote_ubuntu.sh --sync
-#   ./remote_ubuntu.sh ./run_smoke.sh
+#   ./remote_ubuntu.sh ./build_ros.sh
 #
 # Copying is opt-in rather than the default because it is the only step that
 # destroys anything: it is rsync --delete against the remote checkout, so
@@ -34,10 +34,10 @@
 #
 # The command runs from wherever you are, mirrored: the remote working
 # directory is the same path relative to the repository root as the local one.
-# Run `./remote_ubuntu.sh ./run_smoke.sh` from scripts/ and it runs
-# scripts/run_smoke.sh over there. Anchoring at the repository root instead
+# Run `./remote_ubuntu.sh ./build_ros.sh` from scripts/ and it runs
+# scripts/build_ros.sh over there. Anchoring at the repository root instead
 # would mean the same command line meaning two different things depending on
-# which side you typed it, and `./run_smoke.sh` would simply not be found. A
+# which side you typed it, and `./build_ros.sh` would simply not be found. A
 # cwd outside the repository falls back to the remote root.
 #
 # --sync is also the answer when the host cannot reach GitHub: it moves the tree
@@ -69,7 +69,7 @@ The remote command runs in the directory matching this one, so from inside
 scripts/ the paths are the ones you would type locally:
 
   ./remote_ubuntu.sh --sync
-  ./remote_ubuntu.sh ./run_smoke.sh
+  ./remote_ubuntu.sh ./build_ros.sh
 
 Options:
   --sync      Mirror this working tree to the host before running. This is
