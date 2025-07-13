@@ -1,0 +1,138 @@
+# ── Build directories ────────────────────────────────────────────────────────
+# Builds live beside the repository (see scripts/lib.sh camloc_build_dir), so
+# these only catch an in-tree `cmake -B build` done by hand.
+build/
+Build/
+build-*/
+cmake-build-*/
+
+# ── CMake ────────────────────────────────────────────────────────────────────
+# Out-of-source builds land in build/ above; these catch an accidental in-source
+# `cmake .`. Makefile is root-anchored so a hand-written one elsewhere is not
+# silently ignored.
+CMakeFiles/
+CMakeCache.txt
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+/Makefile
+
+# ── Compiled output ──────────────────────────────────────────────────────────
+# Objects and dependency files
+*.d
+*.o
+*.obj
+*.lo
+*.slo
+# Precompiled headers
+*.gch
+*.pch
+# Static libraries
+*.a
+*.la
+*.lai
+*.lib
+# Shared libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+# Executables
+*.app
+*.exe
+*.out
+
+# ── CUDA ─────────────────────────────────────────────────────────────────────
+# Only emitted by a manual `nvcc --keep`; a normal build keeps these in build/.
+*.cubin
+*.fatbin
+*.gpu
+*.i
+*.ii
+*.ptx
+
+# ── Debug info ───────────────────────────────────────────────────────────────
+*.dSYM/
+*.dwo
+*.ilk
+*.pdb
+
+# ── Crash dumps ──────────────────────────────────────────────────────────────
+# `core` is anchored: an unanchored rule would ignore a src/core/ directory.
+/core
+core.[0-9]*
+
+# ── Profiling output ─────────────────────────────────────────────────────────
+# Nsight Systems/Compute and perf write next to the binary being profiled, which
+# for apps/benchmark and the CUDA kernels means inside the tree.
+*.ncu-rep
+*.nsys-rep
+*.qdrep
+*.qdstrm
+*.sqlite
+perf.data
+perf.data.old
+
+# ── Test and tool output ─────────────────────────────────────────────────────
+Testing/
+# clangd index
+.cache/
+
+# ── Editors and IDEs ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.cursor/
+*~
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# ── Package managers ─────────────────────────────────────────────────────────
+vcpkg_installed/
+
+# ── Python (ROS 2 launch files, colcon) ──────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── Merge and patch artifacts ────────────────────────────────────────────────
+*.orig
+*.rej
+
+# ── OS: Linux ────────────────────────────────────────────────────────────────
+# KDE per-folder settings, trash, NFS silly-rename temporaries
+.directory
+.Trash-*
+.nfs*
+
+# ── OS: macOS ────────────────────────────────────────────────────────────────
+# ._* are AppleDouble sidecars on non-APFS volumes
+.DS_Store
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+
+# ── OS: Windows ──────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ── Project: datasets ────────────────────────────────────────────────────────
+# Datasets and evaluation output live in ../<repo>-data, outside the tree
+# entirely -- see scripts/lib.sh camloc_data_dir. This rule only catches an app
+# run by hand from the repository root, since a couple of them default an
+# --output-dir to a relative data/ path. Root-anchored, so a src/.../data/
+# directory would not be swept up with it.
+/data/
+
+# ── Project: ROS 2 workspace ─────────────────────────────────────────────────
+# build_ros.sh puts the colcon workspace beside the repository, in
+# ../<repo>-build-ros/ws, so nothing here catches it. This rule only catches a
+# colcon run started by hand from inside ros/.
+ros/ws/

@@ -1,0 +1,116 @@
+# The CPU build and everything that runs against it: unit tests and the smoke
+# benchmark, on each supported platform.
+#
+# One job per platform, from a matrix -- OS is a cheap axis and the two legs
+# differ only in which install script they call. The toolchains that need their
+# own setup live in their own files instead: cuda.yml (needs nvcc present) and
+# sanitizers.yml (instrumented binaries, weekly schedule). Style gates are in
+# lint.yml, so a formatting slip does not wait behind a compile.
+#
+# No build configuration is spelled out below. Every set of compiler and CMake
+# flags is a preset in CMakePresets.json, so a red job here reproduces locally
+# with the same three commands the job ran.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Both roots sit beside the checkout, which is where every part of the project
+# already expects them: CMakePresets.json puts each build there, and
+# scripts/lib.sh and CMakeLists.txt independently default the data directory
+# there. Nothing overrides CAMLOC_DATA_DIR -- tests/CMakeLists.txt bakes that
+# value into the test binary as a compile definition at configure time and does
+# not read the environment, so an override would move the scripts' output
+# without moving where the tests look for it.
+env:
+  BUILD_ROOT: ${{ github.workspace }}/../camera-map-localization-build
+  DATA_ROOT: ${{ github.workspace }}/../camera-map-localization-data
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # Report every platform's result even if one fails.
+      fail-fast: false
+      matrix:
+        # Pinned images. `-latest` moves without telling you, and the move
+        # arrives as an unrelated red pull request. `name` is what the status
+        # check reads as, so bumping an image does not rename the check that
+        # branch protection requires.
+        include:
+          - name: Ubuntu
+            os: ubuntu-24.04
+          - name: macOS
+            os: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The install scripts are the only package list in the project. Spelling
+      # the packages out here again is how a runner and a developer machine
+      # drift apart -- and it is the macOS side that carries the subtleties
+      # (eigen@3 rather than eigen, and the stb clone that has no formula).
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: ./scripts/install_deps_ubuntu.sh --groups build
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/install_deps_macos.sh --groups build
+
+      # Logged because a runner-image refresh moves these under us, and version
+      # skew is the first thing to check when one platform alone goes red.
+      - name: Toolchain
+        run: |
+          c++ --version
+          cmake --version
+
+      - name: Configure
+        run: cmake --preset cpu
+
+      - name: Build
+        run: cmake --build --preset cpu
+
+      - name: Prepare smoke data
+        run: ./scripts/prepare_smoke_kitti.sh 120
+
+      # The preset sets noTestsAction=error, so a discovery failure is a red
+      # job rather than a green one that ran nothing.
+      - name: Test
+        run: ctest --preset cpu
+
+      # benchmark exits non-zero on a regression by default (fail_on_regression).
+      - name: Benchmark
+        run: |
+          "${BUILD_ROOT}/apps/benchmark/benchmark" \
+            --data-root "${DATA_ROOT}" \
+            --filter smoke_oracle_cpu \
+            --output-json "${DATA_ROOT}/benchmark_ci.json"
+
+      # upload-artifact cannot reach a path outside the workspace, and the data
+      # directory is a sibling of the checkout, so stage the JSON back in.
+      - name: Stage results
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp "${DATA_ROOT}/benchmark_ci.json" artifacts/ || echo "no benchmark JSON produced"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.name }}
+          path: artifacts/benchmark_ci.json
+          if-no-files-found: ignore

@@ -1,0 +1,126 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CAMLOC_BUILD_TESTS": "ON",
+        "CAMLOC_BUILD_CUDA": "OFF"
+      }
+    },
+    {
+      "name": "cpu",
+      "displayName": "CPU (Release)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "CPU (Debug)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "cuda-host",
+      "displayName": "CUDA host paths against the CPU stub (no nvcc)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-cudahost",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAMLOC_CUDA_HOST_ONLY": "ON"
+      }
+    },
+    {
+      "name": "cuda",
+      "displayName": "CUDA (nvcc)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAMLOC_BUILD_CUDA": "ON"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan (RelWithDebInfo)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/../camera-map-localization-build-asan-ubsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CAMLOC_SANITIZER": "address,undefined"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "cpu",
+      "configurePreset": "cpu"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "cuda-host",
+      "configurePreset": "cuda-host"
+    },
+    {
+      "name": "cuda",
+      "configurePreset": "cuda"
+    },
+    {
+      "name": "asan-ubsan",
+      "configurePreset": "asan-ubsan"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "cpu",
+      "inherits": "default",
+      "configurePreset": "cpu"
+    },
+    {
+      "name": "debug",
+      "inherits": "default",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "cuda-host",
+      "inherits": "default",
+      "configurePreset": "cuda-host"
+    },
+    {
+      "name": "cuda",
+      "inherits": "default",
+      "configurePreset": "cuda"
+    },
+    {
+      "name": "asan-ubsan",
+      "inherits": "default",
+      "configurePreset": "asan-ubsan"
+    }
+  ]
+}

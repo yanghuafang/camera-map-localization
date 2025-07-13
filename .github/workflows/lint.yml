@@ -1,0 +1,71 @@
+# Style gates: clang-format and clang-tidy.
+#
+# Its own file because the two are host-independent and cheap next to a build:
+# formatting fails in well under a minute, and neither says anything a second
+# platform would say differently. Separate from build.yml so a formatting slip
+# reports on its own status check instead of behind a compile.
+#
+# Both tools are installed by version. The unversioned packages follow the
+# runner image, and macOS Homebrew ships a different major again -- an unpinned
+# formatter eventually means CI and a developer's editor disagree about a file
+# nobody edited.
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CAMLOC_CLANG_FORMAT: clang-format-18
+    steps:
+      - uses: actions/checkout@v4
+
+      # No build dependencies: format.sh reads the tree, it does not compile it.
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang-format-18
+
+      - name: Check formatting
+        run: ./scripts/format.sh --check
+
+  # clang-tidy needs the compile database, so this configures. It does not
+  # build: clang-tidy parses each translation unit itself and needs only
+  # compile_commands.json plus the installed headers.
+  #
+  # It cannot see src/cuda/distance_transform_gpu.cc, which enters the compile
+  # database only in a real nvcc build -- cuda.yml covers that file.
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CAMLOC_CLANG_TIDY: clang-tidy-18
+      CAMLOC_BUILD_DIR: ${{ github.workspace }}/../camera-map-localization-build
+    steps:
+      - uses: actions/checkout@v4
+
+      # `build` rather than `build,style`: the style group would install an
+      # unversioned clang-tidy this job then ignores in favour of the pinned one.
+      - name: Install dependencies
+        run: ./scripts/install_deps_ubuntu.sh --groups build
+
+      - name: Install clang-tidy
+        run: sudo apt-get install -y --no-install-recommends clang-tidy-18
+
+      - name: Configure
+        run: cmake --preset cpu
+
+      - name: Run clang-tidy
+        run: ./scripts/tidy.sh

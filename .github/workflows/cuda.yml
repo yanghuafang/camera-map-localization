@@ -1,0 +1,96 @@
+# The real nvcc build, on a runner with no GPU.
+#
+# Its own file because it needs the CUDA toolkit installed, which no other job
+# does -- folding it into the build matrix would produce a cell whose install
+# steps have nothing in common with the others.
+#
+# What it is worth:
+#   * src/cuda/distance_transform_kernels.cu and distance_transform_gpu.cc
+#     compile and link. Those two are in no other job's compile database, so
+#     clang-tidy cannot see them either.
+#   * Everything inside #ifdef CAMLOC_CUDA_ENABLED is compiled. Those blocks are
+#     invisible to a CPU-only build, so the call sites can drift out of sync
+#     with cuda/distance_transform.h while every other job stays green -- which
+#     is what happened during the Google-style rename.
+#   * The suite runs against a CUDA-linked binary. No hosted runner has a
+#     device, so IsAvailable() is false and every path takes the CPU fallback;
+#     this is the only job that executes those fallback branches.
+#
+# `cmake --preset cuda-host` covers the second point alone, without a toolkit,
+# and stays the fast local check (scripts/ci.sh --cuda-host). It has no CI job
+# of its own because the nvcc build below compiles a strict superset of it.
+name: CUDA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cuda-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+
+jobs:
+  nvcc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Pinned, and bumped deliberately: a toolkit major can drop the
+      # architectures the published numbers were measured on.
+      CUDA_RELEASE: 13-3
+      # src/cuda/CMakeLists.txt links `cudart` by name and adds no link
+      # directory, so the linker needs the toolkit's lib dir on its search path.
+      LIBRARY_PATH: /usr/local/cuda/lib64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ./scripts/install_deps_ubuntu.sh --groups build
+
+      - name: Install CUDA toolkit
+        run: |
+          # Derived from the runner's own release rather than hardcoded, so
+          # bumping the pinned image above does not 404 on a stale repo path.
+          repo="ubuntu$(. /etc/os-release && echo "${VERSION_ID//./}")"
+          curl -fsSLO "https://developer.download.nvidia.com/compute/cuda/repos/${repo}/x86_64/cuda-keyring_1.1-1_all.deb"
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          # cudart is all this project links; the full toolkit is gigabytes of
+          # libraries it never calls.
+          sudo apt-get install -y --no-install-recommends \
+            "cuda-nvcc-${CUDA_RELEASE}" "cuda-cudart-dev-${CUDA_RELEASE}"
+          echo "/usr/local/cuda-${CUDA_RELEASE/-/.}/bin" >> "${GITHUB_PATH}"
+
+      - name: Configure
+        run: cmake --preset cuda
+
+      # src/cuda/CMakeLists.txt warns and silently builds the CPU stub when
+      # nvcc is missing, so without this a failed toolkit install above would
+      # pass as a green host build -- the exact thing this job exists to catch.
+      - name: Verify nvcc was used
+        run: |
+          nvcc --version
+          cache="${GITHUB_WORKSPACE}/../camera-map-localization-build-cuda/CMakeCache.txt"
+          if ! grep -q '^CAMLOC_NVCC_EXECUTABLE:FILEPATH=/' "${cache}"; then
+            echo "Configure fell back to the CPU stub; nvcc was not found." >&2
+            grep '^CAMLOC_NVCC_EXECUTABLE' "${cache}" >&2 || true
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build --preset cuda
+
+      # No device here, so the CUDA paths fall back to the CPU at run time.
+      # That fallback is the part no other workflow exercises: a CPU-only build
+      # does not compile these branches at all.
+      - name: Prepare smoke data
+        run: ./scripts/prepare_smoke_kitti.sh 120
+
+      - name: Test
+        run: ctest --preset cuda

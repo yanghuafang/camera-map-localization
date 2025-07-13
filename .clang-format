@@ -1,0 +1,66 @@
+# Google C++ style, for camera-map-localization's own code only.
+#
+# scripts/format.sh formats the named roots src/ include/ apps/ tests/ ros/, so
+# the FetchContent dependencies under build/ are never touched. A subtree that
+# must follow another project's conventions (ament/ROS 2, Qt) can carry its own
+# .clang-format: clang-format uses the nearest one above each file.
+
+BasedOnStyle: Google
+IndentWidth: 2
+ColumnLimit: 80
+Standard: c++17
+
+# Pointers and references bind to the type: `uint8_t* p`, `const Mat44& T`.
+#
+# Restated rather than inherited, because this is the one Google default that
+# recently changed meaning. Through LLVM 20 the Google style set
+# DerivePointerAlignment: true, which ignores PointerAlignment and instead
+# copies whichever spelling a file already uses -- so `uint8_t *p` survived
+# wherever it appeared, and --check passed on both spellings. LLVM 21 turned it
+# off to match the style guide.
+#
+# Which behaviour applies therefore depends on the clang-format major, and this
+# repo deliberately does not pin one (see scripts/format.sh): CI runs the
+# distro's clang-format on ubuntu-latest while a macOS developer gets
+# Homebrew's, and the two are routinely several majors apart. Setting both
+# options makes the rule the same on either side of that gap.
+#
+# ReferenceAlignment: Pointer means "whatever PointerAlignment says", so the two
+# cannot drift apart.
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+
+# Include order, exactly as the Google C++ Style Guide states it. Priority 0 is
+# clang-format's own slot for the related header -- cost_grid.h for
+# cost_grid.cc -- so the categories below start at 1:
+#
+#   0. the related header       (automatic)
+#   1. C system headers         <unistd.h>, <sys/stat.h>
+#   2. C++ standard library     <cstdint>, <string>
+#   3. other libraries          <Eigen/Dense>, <gtest/gtest.h>
+#   4. this project             "cam_loc/core/cost_grid.h"
+#
+# Slot 0 is reached only by a quoted include: isMainHeader() rejects anything
+# starting with `<`, so spelling this project's headers <cam_loc/...> would drop
+# the related header into group 4 and sort it alphabetically among its siblings.
+#
+# The C system headers are enumerated rather than matched as <name.h>, because
+# <cuda_runtime.h> and <stb_image.h> are also <name.h>. Matching by shape would
+# need the third-party rule listed first to win -- clang-format takes the first
+# matching regex -- which leaves the list ordered by specificity while the
+# priorities run in a different order. Enumerating makes the rules disjoint, so
+# list order and priority order agree and neither has to be read against the
+# other.
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:    '^<(assert|ctype|errno|fcntl|float|inttypes|limits|locale|math|setjmp|signal|stdarg|stddef|stdint|stdio|stdlib|string|termios|time|unistd|wchar|wctype)\.h>'
+    Priority: 1
+  - Regex:    '^<sys/[a-z_]+\.h>'
+    Priority: 1
+  - Regex:    '^<[a-z0-9_]+>'
+    Priority: 2
+  - Regex:    '^<.*>'
+    Priority: 3
+  - Regex:    '^".*"'
+    Priority: 4

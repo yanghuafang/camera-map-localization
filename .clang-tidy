@@ -1,0 +1,262 @@
+# clang-tidy configuration for camera-map-localization. Run via scripts/tidy.sh.
+#
+# Scope is cam_loc's own code: the src/, apps/ and tests/ entries of the compile
+# database, plus the headers matched by HeaderFilterRegex below. Third-party
+# code is never analyzed — the dependencies live under build/, and
+# ros/cam_loc_ros is built by colcon so it has no entry in this database.
+#
+# == The half of the style guide that is not in this file ==
+#
+# Layout is clang-format's, and no check here substitutes for it. Brace
+# placement (Google attaches `{` to the line opening the block), pointer and
+# reference spelling (`uint8_t* p`, `const Mat44& T`), indent width, column
+# limit and include order are all settings in .clang-format; a rule missing
+# there is unenforced no matter what is added below. Three of them are stated
+# explicitly rather than inherited from `BasedOnStyle: Google`, because the
+# upstream default moved in LLVM 21 — the comment there says which and why.
+#
+# What is left for this file is the half clang-format cannot see: what things
+# are named, and which constructs the guide rules out.
+#
+# A subtree that must follow someone else's conventions (an ament/ROS 2 package,
+# Qt sources with their own naming, a vendored OpenSSL shim) can carry its own
+# .clang-tidy: clang-tidy reads the nearest one above each file, so `Checks:
+# '-*'` there exempts it without touching this file.
+#
+# The list is curated, not a wildcard: a bugprone-/modernize-/performance-/
+# readability- wildcard reports 1689 findings on this tree, 1427 of them in five
+# families that read grid-index arithmetic, Eigen expressions and sensor
+# constants as defects. None of the 1689 is a bug. Every exclusion is recorded
+# below with its reason so it can be re-argued rather than rediscovered.
+#
+# Enabled from families that are otherwise off:
+#
+#   cppcoreguidelines-virtual-class-destructor
+#       map::IMapLoader is deleted through shared_ptr<IMapLoader>, so it needs a
+#       public virtual destructor. This check holds that.
+#   google-explicit-constructor
+#       Guards the parameter-struct constructors (LocalizationParams,
+#       AggregationParams, SamplingGridParams). All are already explicit.
+#   The remaining google- checks enforce style-guide rules no compiler warning
+#       covers: no using-directives, no using at global scope in a header, no
+#       C-style casts, no default arguments on virtuals. All report zero on this
+#       tree today, so they cost nothing and hold the line from here.
+#
+# Disabled, with counts from the wildcard run:
+#
+#   readability-identifier-length (499)
+#       ix/iy/iw are the pose-grid axes, T a transform, dt a distance transform.
+#       A three-character floor renames the algorithms' own notation.
+#   readability-magic-numbers (327)
+#       Sensor and geometry constants at their point of use: 255 = free pixel,
+#       16 = elements of a row-major 4x4 pose, 180.0 = radians to degrees.
+#   modernize-use-trailing-return-type (303)
+#       `auto f() -> Status` buries the Status a caller checks first.
+#   readability-braces-around-statements (161)
+#       Single-line guards (`if (w <= 0.f) continue;`) in the hot loops.
+#   readability-uppercase-literal-suffix (137)
+#       The tree spells float literals 0.f, not 0.F.
+#   readability-math-missing-parentheses (82)
+#       Index and accumulator arithmetic (y * w + x, r * 4 + c) where C++
+#       precedence and the formula agree.
+#   bugprone-misplaced-widening-cast (23),
+#   bugprone-implicit-widening-of-multiplication-result (2)
+#       width * height sizing a buffer. Extents are 1241x376 at most, so the int
+#       product cannot overflow.
+#   bugprone-easily-swappable-parameters (15)
+#       (x_min, x_max, y_min, y_max), (fx, fy, cx, cy) — the domain's own
+#       signatures, read straight from a calibration file.
+#   bugprone-narrowing-conversions (8)
+#       int-to-float in the Felzenszwalb parabola intersection; the conversion
+#       is the algorithm, and each is an explicit static_cast.
+#   modernize-avoid-c-arrays (14)
+#       float[16] is the extern "C" ABI of the CUDA launchers; char[16] is an
+#       snprintf target. std::array cannot cross either boundary.
+#   readability-function-cognitive-complexity (12)
+#       ParseOsmXmlImpl (48) and LoadFromJsonFile (36) are tag-vocabulary
+#       parsers where the branch per tag is the specification.
+#   modernize-use-nodiscard (41)
+#       Status is a scoped enum returned by value; a dropped one is visible.
+#   performance-enum-size (4), modernize-return-braced-init-list (5),
+#   readability-isolate-declaration (4)
+#       Spelling preferences with no effect on behavior or cost.
+#
+#   google-runtime-int
+#       3 findings, all the return type of a C library function: strtol gives
+#       long, strtoul unsigned long, strtoull unsigned long long. Declaring
+#       those int64_t/uint64_t would be wrong where long is 32-bit and would
+#       narrow before the range check that follows.
+#
+# Bug-hunting stays out of scope: correctness is covered by the test suite and
+# the threshold-gated smoke benchmark. Measured on this tree, bugprone-* finds
+# 0 in 64s and clang-analyzer-* finds 1 in 56s — and that one is inside stb,
+# not cam_loc.
+
+Checks: >
+  -*,
+  cert-err34-c,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-virtual-class-destructor,
+  google-build-explicit-make-pair,
+  google-build-namespaces,
+  google-build-using-namespace,
+  google-default-arguments,
+  google-explicit-constructor,
+  google-global-names-in-headers,
+  google-readability-casting,
+  google-readability-namespace-comments,
+  google-runtime-operator,
+  misc-definitions-in-headers,
+  misc-unused-parameters,
+  modernize-deprecated-headers,
+  modernize-use-auto,
+  modernize-use-bool-literals,
+  modernize-use-default-member-init,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  performance-avoid-endl,
+  performance-for-range-copy,
+  performance-inefficient-vector-operation,
+  performance-move-const-arg,
+  performance-no-automatic-move,
+  performance-trivially-destructible,
+  performance-unnecessary-copy-initialization,
+  performance-unnecessary-value-param,
+  readability-avoid-const-params-in-decls,
+  readability-const-return-type,
+  readability-container-size-empty,
+  readability-convert-member-functions-to-static,
+  readability-else-after-return,
+  readability-identifier-naming,
+  readability-implicit-bool-conversion,
+  readability-inconsistent-declaration-parameter-name,
+  readability-make-member-function-const,
+  readability-named-parameter,
+  readability-non-const-parameter,
+  readability-qualified-auto,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-member-init,
+  readability-redundant-string-cstr,
+  readability-simplify-boolean-expr,
+  readability-static-accessed-through-instance,
+  readability-static-definition-in-anonymous-namespace
+
+# cam_loc's own headers only: the public API, plus apps/common, which is
+# header-only and has no .cc of its own in the database.
+#
+# llvm::Regex is POSIX ERE with no lookahead, and clang-tidy does not fail a run
+# whose HeaderFilterRegex it cannot compile — match() just returns false for
+# every path, so the run reports clean having analyzed no header. Verify any
+# change here by confirming a deliberate slip in include/cam_loc/types/status.h
+# is still reported.
+# src/cuda is named, not src. Internal headers should be analyzed --
+# src/cuda/distance_transform_kernels.h is included by a .cc in the database and
+# was matched by nothing -- but the regex is unanchored and matched against the
+# whole path, so a bare `src` also matches third-party checkouts:
+# build/_deps/googletest-src/... and, worse, Eigen's own internal
+# build/_deps/eigen3-src/Eigen/src/Core/... . Measured, that pulled 165 Eigen
+# headers into a single translation unit's report.
+#
+# Anchoring with (^|/) fixes googletest-src but not Eigen, whose layout really
+# does contain a /src/ component. Naming the subdirectory is what works; no
+# dependency here has a src/cuda path. Add a sibling when src/ grows another
+# directory that holds headers.
+HeaderFilterRegex: '(include/cam_loc|apps/common|src/cuda)/.*\.h$'
+
+WarningsAsErrors: ''
+FormatStyle: file
+
+# modernize-use-default-member-init writes `bool b{false}` by default. Every
+# default member initializer in this tree uses assignment — debug_capture_,
+# total_travel_m_, the parameter structs in types/params.h — so pin the option
+# rather than let the check introduce a second spelling.
+CheckOptions:
+  modernize-use-default-member-init.UseAssignment: true
+
+  # `if (!ptr)` is the idiom the style guide itself uses; without this the check
+  # reports every null test in the CUDA entry points. Latent rather than
+  # visible, because those files only enter the compile database when the CUDA
+  # build option is on.
+  readability-implicit-bool-conversion.AllowPointerConditions: true
+
+  # readability-identifier-naming, configured to the Google C++ Style Guide:
+  # types and functions CamelCase, variables and members lower_case with a
+  # trailing underscore on private members, constants kCamelCase.
+  #
+  # When a third-party base class or concept dictates a name we declare — a ROS 2
+  # lifecycle override, a Qt slot, an STL typedef such as value_type — put it in
+  # the matching *IgnoredRegexp below, with a comment naming what imposes it.
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.FunctionCase: CamelCase
+  readability-identifier-naming.MethodCase: CamelCase
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.PublicMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberCase: lower_case
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassConstantPrefix: k
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
+
+  # These four are not covered by any fallback, verified by probing each kind
+  # with a deliberately wrong name and removing the key. Some kinds do fall back
+  # -- local/static variables and pointers to Variable, const and pointer
+  # parameters to Parameter, scoped enum constants to EnumConstant -- but these
+  # are peers rather than children, so omitting them leaves them unchecked.
+  # Union and template parameters have no instance in the tree yet; class
+  # members and globals do.
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.ClassMemberCase: lower_case
+  readability-identifier-naming.GlobalVariableCase: lower_case
+  readability-identifier-naming.UnionCase: CamelCase
+
+  # The guide allows accessors and mutators to be named like variables, which
+  # the check cannot detect on its own. (There is no FunctionIgnoredRegexp for
+  # main: the check special-cases it internally.) Permit either CamelCase, or the
+  # lower_case member name with an optional set_ prefix, or the matrix notation
+  # below (Calibration::T_cam0_velo).
+  readability-identifier-naming.MethodIgnoredRegexp: '^((set_)?[a-z][a-z0-9_]*|d?_?[IKPQRST][A-Za-z0-9]*(_[A-Za-z0-9]+)*)$'
+
+  # Matrix and transform notation: T_world_rig, K, R, P0/P1, R0_rect,
+  # Tr_velo_to_cam0, Q, I, S, dR. lower_case would spell T_world_rig as
+  # t_world_rig, and t is translation everywhere else here — the rename would
+  # assert a wrong meaning, not just lose a convention.
+  #
+  # The leading letters are enumerated rather than accepting any capital, so a
+  # variable that merely forgot its case is still reported. The second
+  # alternative covers snake_case names ending in a matrix, e.g. hist_inv_T.
+  #
+  # The optional `d` and `_` before the capital carry two conventions at once:
+  # dR for a delta, and CUDA's d_ prefix for a device pointer, as in d_T_curr --
+  # a device pointer to T_curr. Spelling that one d_t_curr to satisfy the check
+  # would assert translation, which is the rename this exemption exists to stop.
+  readability-identifier-naming.VariableIgnoredRegexp: '^(d?_?[IKPQRST][A-Za-z0-9]*(_[A-Za-z0-9]+)*|[a-z][a-z0-9_]*_[IKPQRST][A-Za-z0-9]*)$'
+  readability-identifier-naming.ParameterIgnoredRegexp: '^(d?_?[IKPQRST][A-Za-z0-9]*(_[A-Za-z0-9]+)*|[a-z][a-z0-9_]*_[IKPQRST][A-Za-z0-9]*)$'
+  readability-identifier-naming.PublicMemberIgnoredRegexp: '^(d?_?[IKPQRST][A-Za-z0-9]*(_[A-Za-z0-9]+)*|[a-z][a-z0-9_]*_[IKPQRST][A-Za-z0-9]*)$'
+
+  # Macros are UPPER_CASE, except the include guards.
+  #
+  # The guide's guard convention -- CAM_LOC_CORE_COST_GRID_H_, ending in an
+  # underscore -- is not UPPER_CASE by this check's definition, which rejects a
+  # trailing separator, so all 39 guards would report themselves. The exemption
+  # is the full guard shape rather than a bare `_H_$`, so it cannot quietly
+  # excuse an unrelated macro. That leaves the three real macros in the tree
+  # checked: CUDA_CHECK and the two stb implementation switches.
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionIgnoredRegexp: '^CAM_LOC_[A-Z0-9_]+_H_$'

@@ -1,0 +1,90 @@
+# ASan + UBSan over the unit tests, on each supported platform.
+#
+# Its own file because it is slower than the lint and build gates, and because
+# it is the pass most likely to break from a runner-image toolchain bump rather
+# than from a commit -- hence the weekly schedule, so a refreshed image is
+# caught on its own cadence instead of inside someone's pull request.
+#
+# One job per platform. The two are not equivalent: LeakSanitizer rides along
+# with ASan on Linux and is unsupported on macOS/arm64, so the Ubuntu leg checks
+# strictly more. detect_leaks is left at each platform's default rather than
+# forced -- setting detect_leaks=1 would abort every test on the platform that
+# cannot honour it.
+#
+# No TSan job: this codebase has no threads (nothing in src/, include/ or apps/
+# uses std::thread, std::async, std::mutex or OpenMP), so a thread pass would
+# have nothing to observe. Add one with the rest of this file as the template if
+# that changes -- ASan and TSan cannot share a binary, so it must be its own job.
+name: Sanitizers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  # Monday 06:00 UTC.
+  schedule:
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: sanitizers-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  asan-ubsan:
+    name: ${{ matrix.name }} / ASan + UBSan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # Report every platform's result even if one fails.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu
+            os: ubuntu-24.04
+          - name: macOS
+            os: macos-15
+    env:
+      # UBSan is already non-recovering: CMakeLists.txt adds
+      # -fno-sanitize-recover=undefined with CAMLOC_SANITIZER, so a finding is
+      # an exit code rather than a line in a passing log. This only makes the
+      # report readable when one fires.
+      UBSAN_OPTIONS: print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ubuntu 24.04 raised the default ASLR entropy past what the ASan
+      # runtimes shipped with GCC 13 and Clang 17 can map, and the failure is
+      # an allocator abort before main() rather than anything to do with the
+      # code. Harmless where the runtime already copes; macOS is unaffected and
+      # has no such knob.
+      - name: Widen ASLR entropy
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: ./scripts/install_deps_ubuntu.sh --groups build
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/install_deps_macos.sh --groups build
+
+      # RelWithDebInfo rather than Debug, which the preset pins: unoptimized
+      # Eigen is ~200x slower and that multiplies with the sanitizer overhead,
+      # while -g and -fno-omit-frame-pointer keep the reports readable.
+      - name: Configure
+        run: cmake --preset asan-ubsan
+
+      - name: Build
+        run: cmake --build --preset asan-ubsan
+
+      - name: Prepare smoke data
+        run: ./scripts/prepare_smoke_kitti.sh 120
+
+      - name: Test
+        run: ctest --preset asan-ubsan

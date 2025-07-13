@@ -1,0 +1,94 @@
+# Publish the Doxygen API reference to GitHub Pages.
+#
+# Separate from the build and lint workflows on purpose: this produces an
+# artifact for people to read, not a verdict on a commit. A Doxygen warning here
+# should not turn a pull request red, and a red build should not stop the
+# reference from being regenerated. (scripts/docs.sh is strict -- it fails on
+# anything in the warning log -- and is run locally and by hand rather than as a
+# pull-request gate.)
+#
+# No `paths:` filter, deliberately. Filtering to the inputs the Doxyfile reads
+# would be the obvious economy, and it does not work here: this repository is
+# maintained as a single commit that is amended and force-pushed, so a push's
+# `before` and `after` share no ancestor, GitHub's compare returns
+# "No common ancestor", and the changed-file set it matches the filter against
+# is empty. A filtered workflow then never triggers -- not even on a push that
+# edits this very file, which is exactly what happened. Running Doxygen on every
+# push to main costs about a minute and cannot go stale.
+#
+# If a filter is ever wanted back, note the other half of the same hazard: a
+# required check on a path-filtered workflow deadlocks pull requests that touch
+# nothing in the filter, because the workflow never runs and the check never
+# reports. Branch inside an always-running job (dorny/paths-filter) instead.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only by default; the deploy job below escalates for itself. Keeping the
+# Pages and OIDC scopes off the build job is the reason building and deploying
+# are two jobs rather than one -- the job that runs Doxygen over the tree has no
+# token that can publish anything.
+permissions:
+  contents: read
+
+# The one place in this repository with a serialized concurrency group, and the
+# reason is specific to Pages: a site has a single live deployment, and
+# overlapping ones are rejected rather than queued. cancel-in-progress is false
+# so a second push waits its turn instead of killing a publish halfway. The
+# other workflows cancel instead, because nothing they produce is published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # No compiler and no C++ libraries: docs.sh runs Doxygen directly rather
+      # than through CMake, so nothing here has to configure or build. The
+      # Doxygen version is whatever the pinned image ships, which is the point
+      # of pinning it -- an image bump is then a deliberate commit rather than a
+      # morning when the warning set moved.
+      - name: Install Doxygen
+        run: ./scripts/install_deps_ubuntu.sh --groups docs
+
+      - name: Toolchain
+        run: doxygen --version
+
+      # docs.sh writes to <CAMLOC_BUILD_DIR>/docs/html, and defaults that to a
+      # sibling of the repository. Point it inside the workspace so the upload
+      # below can reach it.
+      - name: Build API reference
+        env:
+          CAMLOC_BUILD_DIR: ${{ github.workspace }}/docs-build
+        run: ./scripts/docs.sh
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-build/docs/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The only job in the repository with a write-scoped token: `pages` to
+    # publish and `id-token` to mint the OIDC token actions/deploy-pages
+    # exchanges for permission to do it.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

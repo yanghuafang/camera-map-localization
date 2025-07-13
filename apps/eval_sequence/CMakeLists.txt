@@ -1,0 +1,2 @@
+add_executable(eval_sequence main.cc)
+target_link_libraries(eval_sequence PRIVATE cam_loc_core cam_loc_app_common)
