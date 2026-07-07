@@ -1,0 +1,76 @@
+# Build, unit tests, and smoke regression on every push/PR.
+# Uses CPU-only build (no GPU on GitHub-hosted runners) across Linux and macOS.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux x86_64 (ubuntu-24.04/26.04) + macOS ARM64 (macos-latest).
+        os: [ubuntu-24.04, ubuntu-26.04, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            ninja-build \
+            git
+
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        # cmake and the Apple Clang toolchain ship with the runner image.
+        run: brew install ninja
+
+      - name: Configure (CPU-only)
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCAMLOC_BUILD_CUDA=OFF \
+            -DCAMLOC_BUILD_TESTS=ON
+
+      - name: Build
+        run: |
+          source scripts/lib.sh
+          cmake --build build -j "$(camloc_nproc)"
+
+      - name: Prepare smoke data
+        run: ./scripts/prepare_smoke_kitti.sh 120
+
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Smoke benchmark regression
+        run: |
+          ./build/apps/benchmark/benchmark \
+            --repo-root . \
+            --filter smoke_oracle_cpu \
+            --output-json data/benchmark_ci.json
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-ci-json-${{ matrix.os }}
+          path: data/benchmark_ci.json
+          if-no-files-found: ignore

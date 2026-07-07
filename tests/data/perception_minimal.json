@@ -1,0 +1,7 @@
+{
+  "frame": 0,
+  "lane_lines": [
+    {"type": "solid", "points": [[100.0, 200.0], [150.0, 220.0]]}
+  ],
+  "road_boundaries": []
+}

@@ -1,0 +1,6 @@
+add_subdirectory(run_sequence)
+add_subdirectory(eval_sequence)
+add_subdirectory(eval_perception_compare)
+add_subdirectory(benchmark)
+add_subdirectory(preprocess_kitti)
+add_subdirectory(viz_frame)
